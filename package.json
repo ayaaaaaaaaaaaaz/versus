@@ -16,7 +16,8 @@
     "typecheck": "tsc -b && tsc --noEmit -p functions/tsconfig.json",
     "harvest:enag": "node scripts/harvest-enag.mjs",
     "fetch:prices": "node scripts/fetch-tuik-prices.mjs",
-    "collect": "node scripts/collect-prices.mjs"
+    "collect": "node scripts/collect-prices.mjs",
+    "bundle:prices": "node scripts/bundle-prices.mjs"
   },
   "dependencies": {
     "framer-motion": "^13.4.0",
