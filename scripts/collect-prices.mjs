@@ -38,8 +38,20 @@ const TIMEOUT_MS = 30_000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const round = (n, p = 6) => (Number.isFinite(n) ? Number(n.toPrecision(p)) : null);
 
-/** Signatures of a challenge page. Seeing one means stop, not retry harder. */
-const CHALLENGE = /Just a moment|Attention Required|cf-browser-verification|captcha/i;
+/**
+ * Is this a bot-protection interstitial rather than the page we asked for?
+ *
+ * Deliberately narrow. An earlier version searched the whole document for
+ * "captcha", which matched a ŞOK config key called buyerPhoneUpdateCaptchaAction
+ * and wrongly condemned a perfectly ordinary product page. A challenge announces
+ * itself in the title or through Cloudflare's own markers; a word buried in
+ * 800 kB of application state means nothing.
+ */
+function isChallengePage(html) {
+  const title = (html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? '').trim();
+  if (/just a moment|attention required|access denied|verify you are human/i.test(title)) return true;
+  return /cf-browser-verification|cf_chl_opt|__cf_chl_|g-recaptcha-response/i.test(html);
+}
 
 const robotsCache = new Map();
 
@@ -53,7 +65,7 @@ async function robotsFor(origin) {
     });
     // A store that will not even serve its own rules is one we leave alone.
     text = res.ok ? await res.text() : 'User-agent: *\nDisallow: /';
-    if (CHALLENGE.test(text)) text = 'User-agent: *\nDisallow: /';
+    if (isChallengePage(text)) text = 'User-agent: *\nDisallow: /';
   } catch {
     text = 'User-agent: *\nDisallow: /';
   }
@@ -101,6 +113,68 @@ function readNetQuantity(html) {
 
 const PACK_TO_BASE = { g: 1 / 1000, ml: 1 / 1000, kg: 1, l: 1, unit: 1 };
 
+/**
+ * One extractor per chain, because they publish prices differently.
+ *
+ * Migros ships a schema.org Offer, which is the ideal case: a standard format
+ * meant for machines. ŞOK ships no structured data at all but does embed its
+ * own state, carrying original and discounted prices separately — better for
+ * our purposes, since the index wants the regular price and the discount kept
+ * apart. Neither is scraped from presentational markup, which is what would
+ * break on a redesign.
+ */
+const EXTRACTORS = {
+  migros(html) {
+    const blocks = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)];
+    let offer = null;
+    let productName = null;
+    for (const [, raw] of blocks) {
+      let parsed;
+      try { parsed = JSON.parse(raw); } catch { continue; }
+      offer ??= findOffer(parsed);
+      productName ??= findNamed(parsed);
+      if (offer) break;
+    }
+    if (!offer) return null;
+    return {
+      price: Number(offer.price),
+      discounted: null,
+      productName,
+      currency: offer.priceCurrency ?? 'TRY',
+      availability: String(offer.availability ?? '').split('/').pop() || null,
+    };
+  },
+
+  sok(html) {
+    // The state blob is JSON escaped inside a script tag, so the quotes arrive
+    // as \" and a plain JSON.parse of the page is not available.
+    const prices = html.match(
+      /prices\\?":\s*\{\\?"discounted\\?":\s*\{\\?"value\\?":\s*([\d.]+)[\s\S]{0,200}?\\?"original\\?":\s*\{\\?"value\\?":\s*([\d.]+)/,
+    );
+    let price = null;
+    let discounted = null;
+    if (prices) {
+      discounted = Number(prices[1]);
+      price = Number(prices[2]);
+    } else {
+      // Fall back to the rendered price element before giving up entirely.
+      const shown = html.match(/data-testid="discountedPrice"[^>]*>([\d.]+,\d{2})/);
+      if (shown) price = Number(shown[1].replace(/\./g, '').replace(',', '.'));
+    }
+    if (price == null) return null;
+
+    const name = html.match(/ProductMainInfoArea_productName[^>]*>([^<]+)</)?.[1]?.trim() ?? null;
+    const inStock = /\\?"hasStock\\?":\s*true/.test(html);
+    return {
+      price,
+      discounted,
+      productName: name,
+      currency: 'TRY',
+      availability: inStock ? 'InStock' : null,
+    };
+  },
+};
+
 async function fetchProduct(store, item, product) {
   const url = new URL(product.url);
   const robots = await robotsFor(url.origin);
@@ -116,22 +190,16 @@ async function fetchProduct(store, item, product) {
   if (!res.ok) return { status: 'http_error', note: `HTTP ${res.status}` };
 
   const html = await res.text();
-  if (CHALLENGE.test(html)) return { status: 'challenged', note: 'bot protection page returned' };
+  if (isChallengePage(html)) return { status: 'challenged', note: 'bot protection page returned' };
 
-  const blocks = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)];
-  let offer = null;
-  let productName = null;
-  for (const [, raw] of blocks) {
-    let parsed;
-    try { parsed = JSON.parse(raw); } catch { continue; }
-    offer ??= findOffer(parsed);
-    productName ??= findNamed(parsed);
-    if (offer) break;
-  }
-  if (!offer) return { status: 'no_offer', note: 'no schema.org Offer in page' };
+  const extract = EXTRACTORS[store];
+  if (!extract) return { status: 'no_extractor', note: `no extractor for ${store}` };
 
-  const price = Number(offer.price);
-  if (!Number.isFinite(price) || price <= 0) return { status: 'bad_price', note: `price=${offer.price}` };
+  const found = extract(html);
+  if (!found) return { status: 'no_price', note: 'no price found in page' };
+
+  const { price, discounted, productName, currency, availability } = found;
+  if (!Number.isFinite(price) || price <= 0) return { status: 'bad_price', note: `price=${price}` };
 
   // Prefer the size the page states over the one we recorded; a mismatch is
   // exactly what shrinkflation looks like.
@@ -147,9 +215,9 @@ async function fetchProduct(store, item, product) {
     status: 'ok',
     productName,
     regularPrice: round(price),
-    discountedPrice: null,
-    currency: offer.priceCurrency ?? 'TRY',
-    availability: String(offer.availability ?? '').split('/').pop() || null,
+    discountedPrice: discounted != null && discounted < price ? round(discounted) : null,
+    currency: currency ?? 'TRY',
+    availability,
     packSize: product.pack.size,
     packUnit: product.pack.unit,
     statedNetQuantity: stated,
@@ -204,6 +272,40 @@ const main = async () => {
     }
   }
 
+  /**
+   * Where two stores disagree wildly on the same basket item, it is usually
+   * not the market — it is us, having pinned two different things. ŞOK's
+   * "firik" bulgur is a roasted specialty, its canned chickpeas are not dry
+   * ones. The index itself is unharmed, because Jevons works on each store's
+   * own price relative over time, but the per-item table would be nonsense and
+   * a specialty line is likelier to vanish from the shelf. Flag, do not drop.
+   */
+  const byItem = new Map();
+  for (const o of observations) {
+    if (o.unitPrice == null) continue;
+    const list = byItem.get(o.itemId) ?? [];
+    list.push(o);
+    byItem.set(o.itemId, list);
+  }
+  const divergences = [];
+  for (const [itemId, list] of byItem) {
+    if (list.length < 2) continue;
+    const prices = list.map((o) => o.unitPrice);
+    const ratio = Math.max(...prices) / Math.min(...prices);
+    if (ratio >= 2) {
+      divergences.push({
+        itemId,
+        ratio: round(ratio, 3),
+        stores: Object.fromEntries(list.map((o) => [o.store, o.unitPrice])),
+        note: 'Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş.',
+      });
+    }
+  }
+  if (divergences.length) {
+    console.log(`\n  ${divergences.length} item(s) diverge >2x across stores:`);
+    for (const d of divergences) console.log(`    ${d.itemId.padEnd(14)} ${d.ratio}x  ${JSON.stringify(d.stores)}`);
+  }
+
   mkdirSync(OUT_DIR, { recursive: true });
   const payload = {
     meta: {
@@ -214,10 +316,12 @@ const main = async () => {
       attempted: jobs.length,
       collected: observations.length,
       failed: failures.length,
-      note: 'Fiyatlar mağazaların kendi schema.org Offer verisinden okunur. robots.txt her çalıştırmada yeniden alınır ve uygulanır.',
+      note: 'Fiyatlar mağazaların kendi yapısal verisinden okunur. robots.txt her çalıştırmada yeniden alınır ve uygulanır.',
+      divergenceThreshold: 2,
     },
     observations,
     failures,
+    divergences,
   };
   writeFileSync(resolve(OUT_DIR, `${today}.json`), JSON.stringify(payload, null, 1) + '\n');
 
