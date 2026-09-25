@@ -1,0 +1,8 @@
+name = "versus"
+compatibility_date = "2026-05-01"
+pages_build_output_dir = "dist"
+
+# The EVDS key is a secret, never a var. Set it with:
+#   npx wrangler pages secret put EVDS_API_KEY
+# Leaving it unset is a supported configuration: /api/live then returns only
+# the key-free TCMB daily bulletin, and the app falls back to bundled data.
