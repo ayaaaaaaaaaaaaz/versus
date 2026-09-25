@@ -4,8 +4,13 @@ import {
   buildDailyIndex,
   buildTuikBasketIndex,
   compareSeries,
+  MEANINGFUL_DAYS,
+  detectShrinkflation,
   geometricMean,
+  itemMoves,
   jevonsRelative,
+  readiness,
+  toCsv,
   officialFoodIndex,
   rebase,
   toMonthly,
@@ -25,7 +30,7 @@ const obs = (
   discountedPrice: number | null = null,
 ): PriceObservation => ({
   date, store, itemId, unitPrice, discountedPrice,
-  baseQuantity: 1, source: 'scraped',
+  regularPrice: unitPrice, baseQuantity: 1, source: 'scraped',
 });
 
 describe('geometricMean', () => {
@@ -363,5 +368,162 @@ describe('compareSeries', () => {
     } else {
       expect(c.tuikBasket.find((p) => p.month === c.anchor)!.value).toBeCloseTo(100, 8);
     }
+  });
+});
+
+describe('shrinkflation detection', () => {
+  const pack = (
+    date: string, store: string, quantity: number, shelfPrice: number,
+  ): PriceObservation => ({
+    date, store, itemId: 'ekmek', unitPrice: shelfPrice / quantity,
+    regularPrice: shelfPrice, discountedPrice: null, baseQuantity: quantity,
+    source: 'scraped',
+  });
+  const basket = BASKET.filter((b) => b.id === 'ekmek');
+
+  it('catches a pack that shrinks while the price holds', () => {
+    const events = detectShrinkflation(
+      [pack('2026-01-01', 'migros', 1, 100), pack('2026-01-02', 'migros', 0.8, 100)],
+      basket,
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].sizeChangePct).toBeCloseTo(-20, 6);
+    expect(events[0].shelfPriceChangePct).toBeCloseTo(0, 6);
+    // The invisible part: 100/0.8 = 125 against 100.
+    expect(events[0].unitPriceChangePct).toBeCloseTo(25, 6);
+  });
+
+  it('ignores a pack that shrinks while the price also rises', () => {
+    // That is an ordinary increase and the index already sees it.
+    const events = detectShrinkflation(
+      [pack('2026-01-01', 'migros', 1, 100), pack('2026-01-02', 'migros', 0.8, 130)],
+      basket,
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  it('ignores a price change at constant size', () => {
+    const events = detectShrinkflation(
+      [pack('2026-01-01', 'migros', 1, 100), pack('2026-01-02', 'migros', 1, 130)],
+      basket,
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  it('ignores a pack that grows', () => {
+    const events = detectShrinkflation(
+      [pack('2026-01-01', 'migros', 1, 100), pack('2026-01-02', 'migros', 1.2, 100)],
+      basket,
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  it('ignores noise below the threshold', () => {
+    const events = detectShrinkflation(
+      [pack('2026-01-01', 'migros', 1, 100), pack('2026-01-02', 'migros', 0.995, 100)],
+      basket,
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  it('never compares one store against another', () => {
+    // A smaller pack at a different shop is packaging, not shrinkflation.
+    const events = detectShrinkflation(
+      [pack('2026-01-01', 'migros', 1, 100), pack('2026-01-02', 'sok', 0.7, 100)],
+      basket,
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  it('records each shrink in a sequence of them', () => {
+    const events = detectShrinkflation([
+      pack('2026-01-01', 'migros', 1, 100),
+      pack('2026-01-02', 'migros', 0.9, 100),
+      pack('2026-01-03', 'migros', 0.8, 100),
+    ], basket);
+    expect(events).toHaveLength(2);
+  });
+
+  it('finds nothing in a single day of data', () => {
+    expect(detectShrinkflation([pack('2026-01-01', 'migros', 1, 100)], basket)).toHaveLength(0);
+  });
+});
+
+describe('itemMoves', () => {
+  const basket = BASKET.filter((b) => ['ekmek', 'pilic-baget'].includes(b.id));
+  const o = (date: string, itemId: string, store: string, p: number): PriceObservation => ({
+    date, store, itemId, unitPrice: p, regularPrice: p, discountedPrice: null,
+    baseQuantity: 1, source: 'scraped',
+  });
+
+  it('ranks the biggest risers first', () => {
+    const moves = itemMoves([
+      o('2026-01-01', 'ekmek', 'migros', 10), o('2026-01-01', 'pilic-baget', 'migros', 10),
+      o('2026-01-02', 'ekmek', 'migros', 20), o('2026-01-02', 'pilic-baget', 'migros', 11),
+    ], basket);
+    expect(moves[0].itemId).toBe('ekmek');
+    expect(moves[0].changePct).toBeCloseTo(100, 6);
+    expect(moves[1].changePct).toBeCloseTo(10, 6);
+  });
+
+  it('agrees with the index on what a relative is', () => {
+    // Same Jevons rule: a store missing at base cannot contribute.
+    const moves = itemMoves([
+      o('2026-01-01', 'ekmek', 'migros', 10),
+      o('2026-01-02', 'ekmek', 'migros', 20), o('2026-01-02', 'ekmek', 'sok', 999),
+    ], basket);
+    expect(moves[0].stores).toEqual(['migros']);
+    expect(moves[0].changePct).toBeCloseTo(100, 6);
+  });
+
+  it('is empty without observations', () => {
+    expect(itemMoves([], basket)).toHaveLength(0);
+  });
+});
+
+describe('readiness', () => {
+  const o = (date: string): PriceObservation => ({
+    date, store: 'migros', itemId: 'ekmek', unitPrice: 1, regularPrice: 1,
+    discountedPrice: null, baseQuantity: 1, source: 'scraped',
+  });
+
+  it('reports a single day as not yet meaningful', () => {
+    const r = readiness([o('2026-01-01')]);
+    expect(r.days).toBe(1);
+    expect(r.meaningful).toBe(false);
+    expect(r.remaining).toBe(MEANINGFUL_DAYS - 1);
+  });
+
+  it('measures the span, not the number of files', () => {
+    // Two days a month apart is a month of history with a gap in it.
+    const r = readiness([o('2026-01-01'), o('2026-02-01')]);
+    expect(r.collected).toBe(2);
+    expect(r.days).toBe(32);
+    expect(r.meaningful).toBe(true);
+  });
+
+  it('handles no data at all', () => {
+    const r = readiness([]);
+    expect(r.days).toBe(0);
+    expect(r.firstDay).toBeNull();
+    expect(r.meaningful).toBe(false);
+  });
+});
+
+describe('CSV export', () => {
+  it('emits a header and one row per observation', () => {
+    const csv = toCsv([{
+      date: '2026-01-01', store: 'migros', itemId: 'ekmek', unitPrice: 10,
+      regularPrice: 10, discountedPrice: null, baseQuantity: 1, source: 'scraped',
+    }]);
+    const lines = csv.trim().split('\n');
+    expect(lines[0]).toContain('date,store,item_id');
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toContain('2026-01-01,migros,ekmek');
+  });
+
+  it('exports the real bundle without throwing', () => {
+    const csv = toCsv();
+    expect(csv.split('\n').length).toBeGreaterThan(1);
   });
 });

@@ -4,6 +4,14 @@ import { motion } from 'framer-motion';
 import { AssetRace } from './components/AssetRace';
 import { ComparisonChart } from './components/ComparisonChart';
 import { SourceToggle } from './components/SourceToggle';
+import { StreetChart } from './components/StreetChart';
+import { StreetMethodology } from './components/StreetMethodology';
+import {
+  CollectionLog,
+  ItemMovesTable,
+  ShrinkflationList,
+  StreetReadiness,
+} from './components/StreetPanels';
 import { Basket } from './components/Basket';
 import { Controls } from './components/Controls';
 import { ErosionChart } from './components/ErosionChart';
@@ -409,6 +417,38 @@ function Versus({ params, patch }: BodyProps) {
               </div>
             )}
             <Basket rows={model.basket} fromYear={fromYear} toYear={toYear} />
+          </Section>
+
+          <Section
+            eyebrow="Sokak enflasyonu"
+            title="Rafta ne oluyor"
+            description={
+              <>
+                Resmî gıda endeksinin yanına, kendi topladığımız market fiyatlarından kurulan bir
+                sepet. Alttaki çizgi 2013’ten bu yana TÜİK’in kendi madde fiyatlarıyla hesaplanır;
+                yeşil işaret, kendi ölçümümüzün başladığı günü gösterir.
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <StreetChart />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <StreetReadiness />
+                <CollectionLog />
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                <ItemMovesTable />
+                <ShrinkflationList />
+              </div>
+            </div>
+          </Section>
+
+          <Section
+            eyebrow="Sokak enflasyonu · yöntem"
+            title="Sepet, hesap ve sınırlar"
+            description="Neyin ölçüldüğü, nasıl hesaplandığı ve bu araçla neyin söylenemeyeceği."
+          >
+            <StreetMethodology />
           </Section>
 
           <Section

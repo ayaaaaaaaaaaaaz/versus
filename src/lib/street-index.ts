@@ -13,8 +13,12 @@ export interface PriceObservation {
   date: string;
   store: string;
   itemId: string;
+  /** Shelf price divided by pack quantity — the comparable figure. */
   unitPrice: number;
+  /** The shelf price itself, needed to tell shrinkflation from a plain rise. */
+  regularPrice: number;
   discountedPrice: number | null;
+  /** Pack size in the item's base unit (kg, litre or piece). */
   baseQuantity: number;
   packMismatch?: boolean;
   source: string;
@@ -421,4 +425,202 @@ export function compareSeries(rows: PriceObservation[] = observations): Comparis
         officialFood: rebase(officialFood, anchor),
       }
     : { anchor: null, street, tuikBasket, officialFood };
+}
+
+// ---------------------------------------------------------------------------
+// Per-item movement
+// ---------------------------------------------------------------------------
+
+export interface ItemMove {
+  itemId: string;
+  name: string;
+  /** Unit price on the base day, averaged geometrically across stores. */
+  basePrice: number;
+  latestPrice: number;
+  changePct: number;
+  stores: string[];
+  unit: string;
+}
+
+/**
+ * Per-item price change between the base day and the latest day, ranked.
+ *
+ * Uses the same Jevons relative the index itself uses, so the table cannot
+ * disagree with the headline number it sits underneath.
+ */
+export function itemMoves(
+  rows: PriceObservation[] = observations,
+  basket: BasketItem[] = BASKET,
+): ItemMove[] {
+  const byDate = new Map<string, Map<string, Record<string, number>>>();
+  for (const row of rows) {
+    if (!(row.unitPrice > 0)) continue;
+    const byItem = byDate.get(row.date) ?? new Map();
+    const stores = byItem.get(row.itemId) ?? {};
+    stores[row.store] = row.unitPrice;
+    byItem.set(row.itemId, stores);
+    byDate.set(row.date, byItem);
+  }
+
+  const dates = [...byDate.keys()].sort();
+  if (!dates.length) return [];
+  const first = byDate.get(dates[0])!;
+  const last = byDate.get(dates.at(-1)!)!;
+
+  const out: ItemMove[] = [];
+  for (const item of basket) {
+    const base = first.get(item.id);
+    const now = last.get(item.id);
+    if (!base || !now) continue;
+    const jevons = jevonsRelative(now, base);
+    if (!jevons) continue;
+    const basePrice = geometricMean(jevons.stores.map((s) => base[s]));
+    const latestPrice = geometricMean(jevons.stores.map((s) => now[s]));
+    if (basePrice == null || latestPrice == null) continue;
+    out.push({
+      itemId: item.id,
+      name: item.name,
+      basePrice,
+      latestPrice,
+      changePct: (jevons.relative - 1) * 100,
+      stores: jevons.stores,
+      unit: item.unit,
+    });
+  }
+  return out.sort((a, b) => b.changePct - a.changePct);
+}
+
+// ---------------------------------------------------------------------------
+// Shrinkflation
+// ---------------------------------------------------------------------------
+
+/** Pack must shrink by at least this share to count. */
+const SHRINK_THRESHOLD = 0.02;
+/** Shelf price must move by less than this to count as "held". */
+const PRICE_HELD_THRESHOLD = 0.02;
+
+export interface ShrinkEvent {
+  itemId: string;
+  name: string;
+  store: string;
+  from: { date: string; quantity: number; shelfPrice: number; unitPrice: number };
+  to: { date: string; quantity: number; shelfPrice: number; unitPrice: number };
+  /** Negative: the pack got smaller. */
+  sizeChangePct: number;
+  shelfPriceChangePct: number;
+  /** The part a shopper does not see on the label. */
+  unitPriceChangePct: number;
+}
+
+/**
+ * Finds packs that shrank while the shelf price stayed put.
+ *
+ * This is the one price movement a shopper cannot see: the number on the label
+ * is unchanged, so nothing registers as a rise, but the price per kilo went up.
+ * It is detected by watching a single product at a single store over time —
+ * comparing two different products, or the same product across two shops, would
+ * find nothing but packaging differences.
+ *
+ * Only a *held* shelf price counts. A pack that shrinks while the price also
+ * rises is an ordinary increase and the index already captures it.
+ */
+export function detectShrinkflation(
+  rows: PriceObservation[] = observations,
+  basket: BasketItem[] = BASKET,
+): ShrinkEvent[] {
+  const names = new Map(basket.map((b) => [b.id, b.name]));
+
+  const byProduct = new Map<string, PriceObservation[]>();
+  for (const row of rows) {
+    if (!(row.baseQuantity > 0) || !(row.regularPrice > 0)) continue;
+    const key = `${row.itemId}|${row.store}`;
+    byProduct.set(key, [...(byProduct.get(key) ?? []), row]);
+  }
+
+  const events: ShrinkEvent[] = [];
+  for (const [key, series] of byProduct) {
+    const [itemId, store] = key.split('|');
+    const sorted = series.slice().sort((a, b) => a.date.localeCompare(b.date));
+
+    for (let i = 1; i < sorted.length; i++) {
+      const before = sorted[i - 1];
+      const after = sorted[i];
+      const sizeChange = after.baseQuantity / before.baseQuantity - 1;
+      const priceChange = after.regularPrice / before.regularPrice - 1;
+
+      if (sizeChange > -SHRINK_THRESHOLD) continue;
+      if (Math.abs(priceChange) >= PRICE_HELD_THRESHOLD) continue;
+
+      const beforeUnit = before.regularPrice / before.baseQuantity;
+      const afterUnit = after.regularPrice / after.baseQuantity;
+
+      events.push({
+        itemId,
+        name: names.get(itemId) ?? itemId,
+        store,
+        from: { date: before.date, quantity: before.baseQuantity, shelfPrice: before.regularPrice, unitPrice: beforeUnit },
+        to: { date: after.date, quantity: after.baseQuantity, shelfPrice: after.regularPrice, unitPrice: afterUnit },
+        sizeChangePct: sizeChange * 100,
+        shelfPriceChangePct: priceChange * 100,
+        unitPriceChangePct: (afterUnit / beforeUnit - 1) * 100,
+      });
+    }
+  }
+
+  return events.sort((a, b) => b.to.date.localeCompare(a.to.date));
+}
+
+// ---------------------------------------------------------------------------
+// Readiness
+// ---------------------------------------------------------------------------
+
+/** Days of collection before the index says anything worth reading. */
+export const MEANINGFUL_DAYS = 28;
+
+export interface Readiness {
+  days: number;
+  /** Distinct calendar days actually collected, not the span. */
+  collected: number;
+  meaningful: boolean;
+  remaining: number;
+  firstDay: string | null;
+  lastDay: string | null;
+}
+
+/**
+ * How much collected history exists.
+ *
+ * A freshly started index is a single point at 100, which is true but says
+ * nothing. The UI needs to distinguish "no movement measured" from "no movement
+ * happened" rather than drawing a flat line and letting it be read as the
+ * latter.
+ */
+export function readiness(rows: PriceObservation[] = observations): Readiness {
+  const days = [...new Set(rows.map((r) => r.date))].sort();
+  const span =
+    days.length > 1 ? dayDiff(days[0], days.at(-1)!) + 1 : days.length;
+  return {
+    days: span,
+    collected: days.length,
+    meaningful: span >= MEANINGFUL_DAYS,
+    remaining: Math.max(0, MEANINGFUL_DAYS - span),
+    firstDay: days[0] ?? null,
+    lastDay: days.at(-1) ?? null,
+  };
+}
+
+/** Raw observations as CSV, for the download link. */
+export function toCsv(rows: PriceObservation[] = observations): string {
+  const header = [
+    'date', 'store', 'item_id', 'unit_price', 'regular_price',
+    'discounted_price', 'base_quantity', 'source',
+  ];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    lines.push([
+      r.date, r.store, r.itemId, r.unitPrice, r.regularPrice,
+      r.discountedPrice ?? '', r.baseQuantity, r.source,
+    ].join(','));
+  }
+  return lines.join('\n') + '\n';
 }
