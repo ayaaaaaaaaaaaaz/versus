@@ -1,13 +1,14 @@
 {
  "meta": {
   "date": "2026-09-25",
-  "collectedAt": "2026-09-25T08:42:27.926Z",
+  "collectedAt": "2026-09-25T10:14:19.686Z",
   "userAgent": "versus-street-prices/1.0 (non-commercial inflation research; one pass per day; contact via repository)",
   "delayMs": 5000,
   "attempted": 47,
   "collected": 47,
   "failed": 0,
-  "note": "Fiyatlar mağazaların kendi schema.org Offer verisinden okunur. robots.txt her çalıştırmada yeniden alınır ve uygulanır."
+  "note": "Fiyatlar mağazaların kendi yapısal verisinden okunur. robots.txt her çalıştırmada yeniden alınır ve uygulanır.",
+  "divergenceThreshold": 2
  },
  "observations": [
   {
@@ -998,5 +999,61 @@
    "packMismatch": false
   }
  ],
- "failures": []
+ "failures": [],
+ "divergences": [
+  {
+   "itemId": "ekmek",
+   "ratio": 3.92,
+   "stores": {
+    "migros": 130,
+    "sok": 33.1667
+   },
+   "note": "Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş."
+  },
+  {
+   "itemId": "bulgur",
+   "ratio": 2.86,
+   "stores": {
+    "migros": 34.95,
+    "sok": 99.8
+   },
+   "note": "Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş."
+  },
+  {
+   "itemId": "pilic-baget",
+   "ratio": 2.08,
+   "stores": {
+    "migros": 119.95,
+    "sok": 249
+   },
+   "note": "Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş."
+  },
+  {
+   "itemId": "domates",
+   "ratio": 2.6,
+   "stores": {
+    "migros": 41.95,
+    "sok": 109
+   },
+   "note": "Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş."
+  },
+  {
+   "itemId": "nohut",
+   "ratio": 3.72,
+   "stores": {
+    "migros": 62.95,
+    "sok": 16.9
+   },
+   "note": "Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş."
+  },
+  {
+   "itemId": "tuz",
+   "ratio": 2.38,
+   "stores": {
+    "migros": 26.6,
+    "sok": 63.2
+   },
+   "note": "Mağazalar arası fark 2 katından fazla; büyük olasılıkla farklı ürünler eşleştirilmiş."
+  }
+ ]
 }
