@@ -1,0 +1,159 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink-950: #08070a;
+  --color-ink-900: #0d0c11;
+  --color-ink-850: #131219;
+  --color-ink-800: #1a1822;
+  --color-ink-700: #26232f;
+  --color-ink-600: #3a3647;
+  --color-ink-500: #565064;
+  --color-ink-400: #7d7690;
+  --color-ink-300: #a9a2ba;
+  --color-ink-200: #cfc9dc;
+  --color-ink-100: #e9e5f2;
+
+  --color-gold-500: #f0b429;
+  --color-gold-400: #f7c948;
+  --color-gold-300: #fadb5f;
+  --color-gold-600: #de911d;
+
+  --color-ember-500: #ef4e4e;
+  --color-ember-400: #f86a6a;
+  --color-ember-600: #cf1124;
+
+  --color-mint-400: #3ebd93;
+  --color-mint-500: #27ab83;
+
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  --animate-shimmer: shimmer 2.6s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-ink-100);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* The page is a slow gradient from deep ink to a faint ember glow at the
+     bottom - value draining downward. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(70rem 40rem at 15% -10%, rgb(240 180 41 / 0.09), transparent 60%),
+      radial-gradient(60rem 40rem at 90% 10%, rgb(239 78 78 / 0.07), transparent 55%),
+      radial-gradient(80rem 50rem at 50% 110%, rgb(207 17 36 / 0.08), transparent 60%);
+    pointer-events: none;
+  }
+
+  ::selection {
+    background: var(--color-gold-500);
+    color: var(--color-ink-950);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold-400);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel {
+    background: linear-gradient(180deg, rgb(26 24 34 / 0.75), rgb(13 12 17 / 0.85));
+    border: 1px solid rgb(58 54 71 / 0.6);
+    backdrop-filter: blur(12px);
+  }
+
+  .hairline {
+    border-color: rgb(58 54 71 / 0.5);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Range inputs need per-engine pseudo-elements; Tailwind cannot express these. */
+  .year-range {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: grab;
+  }
+  .year-range:active { cursor: grabbing; }
+
+  .year-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--track, var(--color-ink-700));
+  }
+  .year-range::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--track, var(--color-ink-700));
+  }
+  .year-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    margin-top: -9px;
+    border-radius: 999px;
+    background: var(--color-gold-400);
+    border: 3px solid var(--color-ink-950);
+    box-shadow: 0 0 0 1px rgb(240 180 41 / 0.6), 0 4px 14px rgb(240 180 41 / 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .year-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--color-gold-400);
+    border: 3px solid var(--color-ink-950);
+    box-shadow: 0 0 0 1px rgb(240 180 41 / 0.6), 0 4px 14px rgb(240 180 41 / 0.35);
+  }
+  .year-range:hover::-webkit-slider-thumb { transform: scale(1.12); }
+  .year-range:active::-webkit-slider-thumb { transform: scale(1.04); }
+
+  .shimmer-text {
+    background: linear-gradient(90deg, var(--color-gold-500) 0%, var(--color-gold-300) 45%, #fff6d8 50%, var(--color-gold-300) 55%, var(--color-gold-500) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: var(--animate-shimmer);
+  }
+}

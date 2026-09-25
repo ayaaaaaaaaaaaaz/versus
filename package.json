@@ -1,0 +1,43 @@
+{
+  "name": "versus",
+  "private": "true",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "build:data": "node scripts/build-data.mjs",
+    "test:watch": "vitest",
+    "api": "wrangler pages dev dist --port 8787",
+    "deploy": "npm run build && wrangler pages deploy",
+    "typecheck": "tsc -b && tsc --noEmit -p functions/tsconfig.json",
+    "harvest:enag": "node scripts/harvest-enag.mjs",
+    "fetch:prices": "node scripts/fetch-tuik-prices.mjs",
+    "collect": "node scripts/collect-prices.mjs",
+    "bundle:prices": "node scripts/bundle-prices.mjs"
+  },
+  "dependencies": {
+    "framer-motion": "^13.4.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.86.0"
+  },
+  "description": "Türk Lirası'nın alım gücünün yıllar içindeki erimesini gösteren tek sayfalık uygulama"
+}

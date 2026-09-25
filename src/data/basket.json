@@ -1,0 +1,188 @@
+{
+ "meta": {
+  "disclaimer": "TAHMİNÎ VE TEMSİLÎDİR. TÜFE ve kur serilerinin aksine bu sepet resmî bir istatistik serisinden çekilmez; Türkiye'deki tipik perakende fiyatların hatırlanmasıyla elle derlenmiştir. Büyüklük hissi vermek içindir, kaynak gösterilecek bir fiyat tarihi değildir. Fiyatlar Türkiye geneli/İstanbul tipik perakende ve yıllık ortalamadır; 2005 öncesi yıllar dahil her rakam YENİ lira (TRY) cinsinden yazılmıştır.",
+  "benchmarkYears": [
+   1990,
+   2000,
+   2005,
+   2010,
+   2015,
+   2020,
+   2025
+  ],
+  "interpolation": "Referans yıllar arasındaki fiyatlar, iki referansa da sadık kalacak şekilde TÜFE eğrisi izlenerek türetilir ve arayüzde 'tahmini' olarak işaretlenir.",
+  "compiledAt": "2026-09-21"
+ },
+ "items": [
+  {
+   "id": "bread",
+   "emoji": "🍞",
+   "name": "Ekmek",
+   "nameEn": "Loaf of bread",
+   "unit": "200 g somun",
+   "prices": {
+    "1990": 0.0006,
+    "2000": 0.11,
+    "2005": 0.3,
+    "2010": 0.7,
+    "2015": 1.0,
+    "2020": 1.5,
+    "2025": 15
+   },
+   "note": "Sıradan fırın somunu. Belediye Halk Ekmek bunun belirgin altında kalır."
+  },
+  {
+   "id": "simit",
+   "emoji": "🥨",
+   "name": "Simit",
+   "nameEn": "Simit",
+   "unit": "1 adet",
+   "prices": {
+    "1990": 0.0004,
+    "2000": 0.1,
+    "2005": 0.35,
+    "2010": 0.75,
+    "2015": 1.0,
+    "2020": 1.75,
+    "2025": 15
+   },
+   "note": "Sokak tezgâhı fiyatı."
+  },
+  {
+   "id": "tea",
+   "emoji": "🍵",
+   "name": "Çay",
+   "nameEn": "Glass of tea",
+   "unit": "1 bardak, kahvehane",
+   "prices": {
+    "1990": 0.0005,
+    "2000": 0.15,
+    "2005": 0.4,
+    "2010": 0.75,
+    "2015": 1.25,
+    "2020": 3.0,
+    "2025": 25
+   },
+   "note": "Mahalle kahvehanesi; zincir kafe değil."
+  },
+  {
+   "id": "transit",
+   "emoji": "🚌",
+   "name": "Toplu taşıma",
+   "nameEn": "Transit ride",
+   "unit": "İstanbul tam bilet",
+   "prices": {
+    "1990": 0.0008,
+    "2000": 0.3,
+    "2005": 1.15,
+    "2010": 1.75,
+    "2015": 2.15,
+    "2020": 3.0,
+    "2025": 27
+   },
+   "note": "İstanbul, tek yön tam bilet."
+  },
+  {
+   "id": "petrol",
+   "emoji": "⛽",
+   "name": "Benzin",
+   "nameEn": "Petrol",
+   "unit": "1 litre",
+   "prices": {
+    "1990": 0.0012,
+    "2000": 0.55,
+    "2005": 2.6,
+    "2010": 3.75,
+    "2015": 4.5,
+    "2020": 6.6,
+    "2025": 52
+   },
+   "note": "Pompa fiyatı; ağırlıklı olarak vergiye bağlı olduğundan enflasyon kadar politikayı da izler."
+  },
+  {
+   "id": "cinema",
+   "emoji": "🎬",
+   "name": "Sinema bileti",
+   "nameEn": "Cinema ticket",
+   "unit": "1 tam bilet",
+   "prices": {
+    "1990": 0.003,
+    "2000": 4.0,
+    "2005": 8.0,
+    "2010": 12.0,
+    "2015": 18.0,
+    "2020": 35.0,
+    "2025": 250
+   },
+   "note": "Şehir merkezinde çok salonlu sinemada akşam seansı tam bilet."
+  },
+  {
+   "id": "bigmac",
+   "emoji": "🍔",
+   "name": "Big Mac",
+   "nameEn": "Big Mac",
+   "unit": "1 sandviç",
+   "prices": {
+    "2000": 2.5,
+    "2005": 4.5,
+    "2010": 5.65,
+    "2015": 9.25,
+    "2020": 14.5,
+    "2025": 190
+   },
+   "note": "Kabaca Economist Big Mac endeksi esası; McDonald's Türkiye'ye 1986'da girdi."
+  },
+  {
+   "id": "rent",
+   "emoji": "🏠",
+   "name": "Ortalama kira",
+   "nameEn": "Monthly rent",
+   "unit": "İstanbul 2+1, aylık",
+   "prices": {
+    "1990": 0.35,
+    "2000": 150,
+    "2005": 400,
+    "2010": 700,
+    "2015": 1200,
+    "2020": 2200,
+    "2025": 30000
+   },
+   "note": "İlçeye göre çok değişir. 2021 sonrasında kiralar manşet TÜFE'nin epey önünde koştu."
+  },
+  {
+   "id": "minwage",
+   "emoji": "💼",
+   "name": "Asgari ücret",
+   "nameEn": "Minimum wage",
+   "unit": "net aylık",
+   "prices": {
+    "1990": 0.55,
+    "2000": 118,
+    "2005": 350,
+    "2010": 577,
+    "2015": 1000,
+    "2020": 2324,
+    "2025": 22104
+   },
+   "note": "Net aylık asgari ücret. Ölçek vermek için eklendi: bu bir fiyat değil, gelirdir.",
+   "isIncome": true
+  },
+  {
+   "id": "gold",
+   "emoji": "🥇",
+   "name": "Gram altın",
+   "nameEn": "Gram of gold",
+   "unit": "1 gram",
+   "prices": {
+    "1990": 0.0319,
+    "2000": 5.61,
+    "2005": 19.2,
+    "2010": 58.2,
+    "2015": 101.5,
+    "2020": 400,
+    "2025": 4200
+   },
+   "note": "(Dolar bazlı gram altın fiyatı) x (TRY/USD) olarak türetildi. Kur tarafı World Bank serisinden gelir; külçe tarafı tahminîdir."
+  }
+ ]
+}

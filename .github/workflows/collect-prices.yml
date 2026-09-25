@@ -1,0 +1,84 @@
+name: Collect street prices
+
+# Once a day, well after Turkish shops have posted the day's prices.
+# 06:00 UTC is 09:00 in Türkiye. GitHub may delay scheduled runs under load,
+# which is fine: the index works on daily observations, not exact timestamps.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why this manual run'
+        required: false
+        default: 'manual check'
+
+permissions:
+  contents: write
+
+# Never let two collections overlap. A doubled run would mean twice the
+# requests to the shops for no extra data.
+concurrency:
+  group: collect-prices
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    # The collector sleeps 5s between requests by design, so a full pass over
+    # both stores takes a few minutes. The cap is generous but finite, so a
+    # hung request cannot burn an hour of runner time.
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect prices
+        id: collect
+        # The collector already isolates per-item failures and always writes a
+        # file. `|| true` covers the remaining case — it could not write at all —
+        # so that a bad day never turns into a red build and a silent gap.
+        run: npm run collect || true
+
+      - name: Summarise the run
+        if: always()
+        run: |
+          FILE="data/prices/$(date -u +%F).json"
+          if [ -f "$FILE" ]; then
+            node -e '
+              const f = process.argv[1];
+              const d = require("./" + f);
+              const m = d.meta;
+              console.log(`collected ${m.collected}/${m.attempted}, ${m.failed} failed`);
+              for (const x of d.failures ?? []) console.log(`  FAIL ${x.store}/${x.itemId}: ${x.status} ${x.note ?? ""}`);
+              for (const x of d.divergences ?? []) console.log(`  DIVERGE ${x.itemId} ${x.ratio}x`);
+            ' "$FILE" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "no price file written for today" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Commit the day's prices
+        run: |
+          git config user.name  "versus-collector[bot]"
+          git config user.email "versus-collector[bot]@users.noreply.github.com"
+          git add data/prices
+          if git diff --cached --quiet; then
+            echo "nothing new to commit"
+            exit 0
+          fi
+          git commit -m "Prices for $(date -u +%F)"
+          # Someone may have pushed while we were collecting; rebase rather
+          # than force, so a human commit is never overwritten by the bot.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && break
+            sleep 5
+          done
+          git push origin "HEAD:${GITHUB_REF_NAME}"

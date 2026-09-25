@@ -1,0 +1,43 @@
+{
+ "meta": {
+  "note": "Elle derlenmiş olay zaman çizelgesi. Tarihler kamuya açık, iyi belgelenmiş olaylara aittir; açıklamalar olgusal tutulmuş, yorum eklenmemiştir. Hangi olayın enflasyona ne kadar yol açtığı tartışmalıdır — bu işaretler nedensellik iddiası değil, bağlam sunar.",
+  "compiledAt": "2026-09-23",
+  "precision": "Aylık. 1996 öncesi olaylar yalnızca yıllık görünümde görünür, çünkü aylık endeks 1996-01'de başlar."
+ },
+ "events": [
+  { "month": "1980-01", "title": "24 Ocak Kararları", "kind": "policy", "weight": 3,
+    "detail": "İthal ikamesinden dışa açık ekonomiye geçiş; kapsamlı devalüasyon ve fiyat serbestisi." },
+  { "month": "1980-09", "title": "12 Eylül darbesi", "kind": "political", "weight": 2,
+    "detail": "Askerî darbe. Ekonomi programı sürdürüldü, ücretler baskılandı." },
+  { "month": "1989-08", "title": "32 sayılı Karar", "kind": "policy", "weight": 2,
+    "detail": "Sermaye hareketleri serbestleştirildi; TL konvertibl hale geldi." },
+  { "month": "1994-04", "title": "5 Nisan Kararları", "kind": "crisis", "weight": 3,
+    "detail": "1994 krizi: TL bir gecede yaklaşık yarı yarıya değer kaybetti, enflasyon üç haneye çıktı." },
+  { "month": "1999-08", "title": "17 Ağustos depremi", "kind": "external", "weight": 2,
+    "detail": "Marmara depremi. Büyük insani kayıp ve ciddi mali yük." },
+  { "month": "2000-11", "title": "Kasım 2000 bankacılık krizi", "kind": "crisis", "weight": 2,
+    "detail": "Bankacılık sisteminde likidite krizi; gecelik faizler fırladı." },
+  { "month": "2001-02", "title": "Şubat 2001 krizi", "kind": "crisis", "weight": 3,
+    "detail": "Sabit kur çöktü, TL dalgalanmaya bırakıldı. Cumhuriyet tarihinin en sert durgunluklarından biri." },
+  { "month": "2001-05", "title": "Güçlü Ekonomiye Geçiş Programı", "kind": "policy", "weight": 2,
+    "detail": "Bağımsız merkez bankası, enflasyon hedeflemesi ve bankacılık reformu." },
+  { "month": "2005-01", "title": "Altı sıfır atıldı", "kind": "policy", "weight": 2,
+    "detail": "1.000.000 TL = 1 YTL. Yalnızca birim değişimi; alım gücüne etkisi yok." },
+  { "month": "2008-09", "title": "Küresel finansal kriz", "kind": "external", "weight": 2,
+    "detail": "Lehman Brothers'ın iflası; sermaye çıkışı ve keskin daralma." },
+  { "month": "2013-05", "title": "Taper tantrum", "kind": "external", "weight": 2,
+    "detail": "Fed'in varlık alımlarını azaltma sinyali gelişen ülkelerden sermaye çıkışını tetikledi." },
+  { "month": "2016-07", "title": "15 Temmuz darbe girişimi", "kind": "political", "weight": 2,
+    "detail": "Başarısız darbe girişimi ve ardından gelen olağanüstü hâl dönemi." },
+  { "month": "2018-08", "title": "Ağustos 2018 kur krizi", "kind": "crisis", "weight": 3,
+    "detail": "Diplomatik gerilim ve gümrük vergileriyle TL bir ay içinde yaklaşık dörtte bir değer kaybetti." },
+  { "month": "2021-09", "title": "Faiz indirim döngüsü başladı", "kind": "policy", "weight": 3,
+    "detail": "Yüksek enflasyona rağmen politika faizi indirilmeye başlandı." },
+  { "month": "2021-12", "title": "Kur Korumalı Mevduat", "kind": "policy", "weight": 3,
+    "detail": "Aralık 2021'de TL sert değer kaybetti; KKM mevduatı kurdan korumak üzere açıklandı." },
+  { "month": "2023-06", "title": "Politika dönüşü", "kind": "policy", "weight": 3,
+    "detail": "Seçim sonrası yeni ekonomi yönetimi; faiz artırımlarına ve ortodoks politikaya dönüş." },
+  { "month": "2024-03", "title": "Politika faizi %50", "kind": "policy", "weight": 2,
+    "detail": "Sıkılaşma döngüsünün zirvesi; enflasyonla mücadelede en yüksek faiz seviyesi." }
+ ]
+}
