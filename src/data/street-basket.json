@@ -1,0 +1,450 @@
+{
+ "meta": {
+  "note": "Sokak fiyat sepeti. Her kalem bir TÜİK maddesine, bir COICOP alt grubuna ve mağaza başına tek bir sabit ürüne bağlanır.",
+  "weightSource": "Eurostat prc_hicp_inw, Türkiye 2025 — manşet endeksin kullandığı resmî ağırlıklar.",
+  "weightCaveat": "Alt grup toplamları resmîdir. Grup içindeki dağılım, ürün düzeyinde yayımlanmış ağırlık bulunmadığı için izlenen kalemlere eşit bölünür; tek keyfî adım budur.",
+  "productSource": "Ürün adresleri mağazaların kendi sitemap dosyalarından alınmıştır. Üç zincirde de robots.txt arama yollarını yasaklar, bu yüzden sepet sabit ürünlere sabitlenmiştir.",
+  "compiledAt": "2026-09-25"
+ },
+ "coicopWeights": {
+  "CP0111": {
+   "label": "Ekmek ve tahıllar",
+   "weight": 4.6
+  },
+  "CP0112": {
+   "label": "Et",
+   "weight": 4.87
+  },
+  "CP0114": {
+   "label": "Süt, peynir ve yumurta",
+   "weight": 2.97
+  },
+  "CP0115": {
+   "label": "Katı ve sıvı yağlar",
+   "weight": 1.63
+  },
+  "CP0116": {
+   "label": "Meyve",
+   "weight": 2.72
+  },
+  "CP0117": {
+   "label": "Sebze",
+   "weight": 4.21
+  },
+  "CP0118": {
+   "label": "Şeker ve şekerli ürünler",
+   "weight": 1.53
+  },
+  "CP0119": {
+   "label": "Diğer gıda ürünleri",
+   "weight": 0.52
+  },
+  "CP012": {
+   "label": "Alkolsüz içecekler",
+   "weight": 1.56
+  }
+ },
+ "items": [
+  {
+   "id": "ekmek",
+   "name": "Ekmek",
+   "tuikCommodity": "Bread (common)",
+   "coicop": "CP0111",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/istanbul-organik-halk-ekmek-500-g-p-4d1660",
+     "pack": {
+      "size": 500,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "pirinc",
+   "name": "Pirinç (baldo)",
+   "tuikCommodity": "Rice",
+   "coicop": "CP0111",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-baldo-pirinc-1-kg-p-f6a53",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "makarna",
+   "name": "Makarna (spagetti)",
+   "tuikCommodity": "Pasta",
+   "coicop": "CP0111",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-spagetti-makarna-500-g-p-4cc128",
+     "pack": {
+      "size": 500,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "bulgur",
+   "name": "Pilavlık bulgur",
+   "tuikCommodity": "Bulgur",
+   "coicop": "CP0111",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-pilavlik-bulgur-1000-g-p-106795",
+     "pack": {
+      "size": 1000,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "un",
+   "name": "Un",
+   "tuikCommodity": "Wheat flour",
+   "coicop": "CP0111",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-un-2-kg-p-4c8057",
+     "pack": {
+      "size": 2,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "pilic-baget",
+   "name": "Piliç baget",
+   "tuikCommodity": "Meat (chicken)",
+   "coicop": "CP0112",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/uzman-kasap-pilic-baget-kg-p-c65e74",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "dana-kiyma",
+   "name": "Dana kıyma",
+   "tuikCommodity": null,
+   "coicop": "CP0112",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/uzman-kasap-dana-kiyma-400-g-p-17deed0",
+     "pack": {
+      "size": 400,
+      "unit": "g"
+     }
+    }
+   },
+   "note": "TÜİK dana eti serisini 2022-04’te sonlandırdı; bu kalemin resmî karşılığı yok."
+  },
+  {
+   "id": "sut",
+   "name": "Süt (yarım yağlı)",
+   "tuikCommodity": "Milk (pasteurized)",
+   "coicop": "CP0114",
+   "unit": "l",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-yarim-yagli-uht-sut-1-l-p-a805ad",
+     "pack": {
+      "size": 1,
+      "unit": "l"
+     }
+    }
+   }
+  },
+  {
+   "id": "beyaz-peynir",
+   "name": "Beyaz peynir",
+   "tuikCommodity": "Cheese",
+   "coicop": "CP0114",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-az-yagli-beyaz-peynir-500-g-p-98e1c7",
+     "pack": {
+      "size": 500,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "yogurt",
+   "name": "Yoğurt",
+   "tuikCommodity": "Yogurt",
+   "coicop": "CP0114",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-tam-yagli-kaymakli-yogurt-1-kg-p-bebcb0",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "yumurta",
+   "name": "Yumurta",
+   "tuikCommodity": "Eggs",
+   "coicop": "CP0114",
+   "unit": "unit",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/gures-m-orta-boy-yumurta-30lu-53-63-g-p-1312df3",
+     "pack": {
+      "size": 30,
+      "unit": "unit"
+     }
+    }
+   }
+  },
+  {
+   "id": "aycicek-yagi",
+   "name": "Ayçiçek yağı",
+   "tuikCommodity": "Oil (sunflower)",
+   "coicop": "CP0115",
+   "unit": "l",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-aycicek-yagi-1-l-p-3eb726",
+     "pack": {
+      "size": 1,
+      "unit": "l"
+     }
+    }
+   }
+  },
+  {
+   "id": "zeytinyagi",
+   "name": "Zeytinyağı (naturel sızma)",
+   "tuikCommodity": "Oil (olive)",
+   "coicop": "CP0115",
+   "unit": "l",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-naturel-sizma-zeytinyagi-1-l-p-3f05b2",
+     "pack": {
+      "size": 1,
+      "unit": "l"
+     }
+    }
+   }
+  },
+  {
+   "id": "elma",
+   "name": "Elma (gala)",
+   "tuikCommodity": "Apples",
+   "coicop": "CP0116",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/elma-gala-kg-p-19e1000",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "muz",
+   "name": "Muz (yerli)",
+   "tuikCommodity": "Bananas",
+   "coicop": "CP0116",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/muz-yerli-kg-p-1a01b70",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "domates",
+   "name": "Domates",
+   "tuikCommodity": "Tomatoes",
+   "coicop": "CP0117",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/domates-kg-p-1ac7780",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "sogan",
+   "name": "Kuru soğan",
+   "tuikCommodity": "Onions",
+   "coicop": "CP0117",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/sogan-kuru-yeni-mahsul-kg-p-1b13277",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "patates",
+   "name": "Patates",
+   "tuikCommodity": "Potatoes",
+   "coicop": "CP0117",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/patates-yeni-mahsul-kg-p-1afb90b",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "mercimek",
+   "name": "Kırmızı mercimek",
+   "tuikCommodity": "Lentils",
+   "coicop": "CP0117",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-yerli-kirmizi-mercimek-1-kg-p-102cb6",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "nohut",
+   "name": "Nohut",
+   "tuikCommodity": "Chickpeas",
+   "coicop": "CP0117",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-nohut-1000-g-p-100579",
+     "pack": {
+      "size": 1000,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "kuru-fasulye",
+   "name": "Kuru fasulye",
+   "tuikCommodity": "Beans (white)",
+   "coicop": "CP0117",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-dermason-kuru-fasulye-1-kg-p-f9061",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "toz-seker",
+   "name": "Toz şeker",
+   "tuikCommodity": "Sugar",
+   "coicop": "CP0118",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-toz-seker-1-kg-p-3281b4",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  },
+  {
+   "id": "tuz",
+   "name": "Tuz (iyotlu)",
+   "tuikCommodity": "Salt",
+   "coicop": "CP0119",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/salina-iyotlu-tuz-750-g-p-5be050",
+     "pack": {
+      "size": 750,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "salca",
+   "name": "Domates salçası",
+   "tuikCommodity": "Tomatoes (paste)",
+   "coicop": "CP0119",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/tat-domates-salcasi-830-g-p-897b59",
+     "pack": {
+      "size": 830,
+      "unit": "g"
+     }
+    }
+   }
+  },
+  {
+   "id": "cay",
+   "name": "Siyah çay",
+   "tuikCommodity": "Tea",
+   "coicop": "CP012",
+   "unit": "kg",
+   "stores": {
+    "migros": {
+     "url": "https://www.migros.com.tr/migros-rize-siyah-cay-1-kg-p-2f9635",
+     "pack": {
+      "size": 1,
+      "unit": "kg"
+     }
+    }
+   }
+  }
+ ]
+}
