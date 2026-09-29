@@ -1,25 +1,28 @@
 {
  "meta": {
   "note": "data/prices/*.json dosyalarının düz birleşimi. Hiçbir boşluk doldurulmaz, hiçbir satır elenmez.",
-  "bundledAt": "2026-09-25",
+  "bundledAt": "2026-09-29",
   "days": 1,
-  "firstDay": "2026-09-25",
-  "lastDay": "2026-09-25",
-  "observations": 47,
+  "firstDay": "2026-09-29",
+  "lastDay": "2026-09-29",
+  "observations": 46,
+  "scraped": 46,
+  "manual": 0,
+  "manualProblems": [],
   "totalFailures": 0
  },
  "days": [
   {
-   "date": "2026-09-25",
-   "attempted": 47,
-   "collected": 47,
+   "date": "2026-09-29",
+   "attempted": 46,
+   "collected": 46,
    "failed": 0,
    "divergences": []
   }
  ],
  "observations": [
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "aycicek-yagi",
    "unitPrice": 125.95,
@@ -31,7 +34,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "aycicek-yagi",
    "unitPrice": 117.5,
@@ -43,7 +46,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "beyaz-peynir",
    "unitPrice": 259.8,
@@ -55,7 +58,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "beyaz-peynir",
    "unitPrice": 278,
@@ -67,7 +70,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "bulgur",
    "unitPrice": 34.95,
@@ -79,19 +82,19 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "bulgur",
-   "unitPrice": 99.8,
-   "regularPrice": 49.9,
+   "unitPrice": 34,
+   "regularPrice": 34,
    "discountedPrice": null,
-   "baseQuantity": 0.5,
-   "productName": "Tat Firik Bulgur 500 g",
+   "baseQuantity": 1,
+   "productName": "Anadolu Mutfağı Pilavlık Bulgur 1 kg",
    "packMismatch": false,
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "cay",
    "unitPrice": 259.95,
@@ -103,7 +106,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "cay",
    "unitPrice": 318,
@@ -115,7 +118,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "dana-kiyma",
    "unitPrice": 849.875,
@@ -127,11 +130,11 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "domates",
-   "unitPrice": 41.95,
-   "regularPrice": 41.95,
+   "unitPrice": 52.5,
+   "regularPrice": 52.5,
    "discountedPrice": null,
    "baseQuantity": 1,
    "productName": "Domates Kg - Migros",
@@ -139,31 +142,19 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "domates",
-   "unitPrice": 109,
-   "regularPrice": 109,
+   "unitPrice": 49,
+   "regularPrice": 49,
    "discountedPrice": null,
    "baseQuantity": 1,
-   "productName": "Pembe Domates Kg",
+   "productName": "Domates Kg",
    "packMismatch": false,
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
-   "store": "migros",
-   "itemId": "ekmek",
-   "unitPrice": 130,
-   "regularPrice": 65,
-   "discountedPrice": null,
-   "baseQuantity": 0.5,
-   "productName": "İstanbul Organik Halk Ekmek 500 G - Migros",
-   "packMismatch": false,
-   "source": "scraped"
-  },
-  {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "ekmek",
    "unitPrice": 33.1667,
@@ -175,7 +166,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "elma",
    "unitPrice": 59.95,
@@ -187,7 +178,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "elma",
    "unitPrice": 89.9,
@@ -199,7 +190,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "kuru-fasulye",
    "unitPrice": 77.95,
@@ -211,7 +202,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "kuru-fasulye",
    "unitPrice": 89,
@@ -223,11 +214,11 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "makarna",
-   "unitPrice": 28,
-   "regularPrice": 14,
+   "unitPrice": 35.9,
+   "regularPrice": 17.95,
    "discountedPrice": null,
    "baseQuantity": 0.5,
    "productName": "Migros Spagetti  Makarna 500 G - Migros",
@@ -235,7 +226,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "makarna",
    "unitPrice": 34,
@@ -247,7 +238,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "mercimek",
    "unitPrice": 89.95,
@@ -259,7 +250,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "mercimek",
    "unitPrice": 47.8,
@@ -271,7 +262,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "muz",
    "unitPrice": 104.95,
@@ -283,7 +274,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "muz",
    "unitPrice": 109,
@@ -295,7 +286,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "nohut",
    "unitPrice": 62.95,
@@ -307,19 +298,19 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "nohut",
-   "unitPrice": 16.9,
-   "regularPrice": 16.9,
+   "unitPrice": 62.5,
+   "regularPrice": 62.5,
    "discountedPrice": null,
    "baseQuantity": 1,
-   "productName": "Tat Beyaz Nohut 1 Kg",
+   "productName": "Anadolu Mutfağı Nohut 1 kg",
    "packMismatch": false,
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "patates",
    "unitPrice": 27.95,
@@ -331,7 +322,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "patates",
    "unitPrice": 35,
@@ -343,7 +334,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "pilic-baget",
    "unitPrice": 119.95,
@@ -355,19 +346,19 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "pilic-baget",
-   "unitPrice": 249,
-   "regularPrice": 249,
+   "unitPrice": 145,
+   "regularPrice": 145,
    "discountedPrice": null,
    "baseQuantity": 1,
-   "productName": "Gedik Piliç But Pirzola Kg",
+   "productName": "Gedik Piliç Baget Kg",
    "packMismatch": false,
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "pirinc",
    "unitPrice": 89.95,
@@ -379,7 +370,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "pirinc",
    "unitPrice": 65.75,
@@ -391,7 +382,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "salca",
    "unitPrice": 98.7349,
@@ -403,7 +394,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "salca",
    "unitPrice": 96.2651,
@@ -415,11 +406,11 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "sogan",
-   "unitPrice": 24.75,
-   "regularPrice": 24.75,
+   "unitPrice": 36.95,
+   "regularPrice": 36.95,
    "discountedPrice": null,
    "baseQuantity": 1,
    "productName": "Soğan Kuru (Yeni Mahsul) Kg - Migros",
@@ -427,7 +418,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "sut",
    "unitPrice": 43.25,
@@ -439,7 +430,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "sut",
    "unitPrice": 59,
@@ -451,7 +442,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "toz-seker",
    "unitPrice": 52.95,
@@ -463,7 +454,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "toz-seker",
    "unitPrice": 43.8,
@@ -475,7 +466,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "tuz",
    "unitPrice": 26.6,
@@ -487,19 +478,19 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "tuz",
-   "unitPrice": 63.2,
-   "regularPrice": 7.9,
+   "unitPrice": 16,
+   "regularPrice": 12,
    "discountedPrice": null,
-   "baseQuantity": 0.125,
-   "productName": "Anadolu Mutfağı İyotlu Tuz 125 g",
+   "baseQuantity": 0.75,
+   "productName": "Anadolu Mutfağı Tuz 750 g",
    "packMismatch": false,
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "un",
    "unitPrice": 30.475,
@@ -511,7 +502,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "un",
    "unitPrice": 30,
@@ -523,7 +514,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "yogurt",
    "unitPrice": 94.5,
@@ -535,7 +526,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "yogurt",
    "unitPrice": 157.778,
@@ -547,7 +538,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "yumurta",
    "unitPrice": 5.66333,
@@ -559,7 +550,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "migros",
    "itemId": "zeytinyagi",
    "unitPrice": 275,
@@ -571,7 +562,7 @@
    "source": "scraped"
   },
   {
-   "date": "2026-09-25",
+   "date": "2026-09-29",
    "store": "sok",
    "itemId": "zeytinyagi",
    "unitPrice": 310,
