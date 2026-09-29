@@ -53,13 +53,6 @@
    "coicop": "CP0111",
    "unit": "kg",
    "stores": {
-    "migros": {
-     "url": "https://www.migros.com.tr/istanbul-organik-halk-ekmek-500-g-p-4d1660",
-     "pack": {
-      "size": 500,
-      "unit": "g"
-     }
-    },
     "sok": {
      "url": "https://www.sokmarket.com.tr/tamkoy-tahilli-ekmek-300-g-p-3121",
      "pack": {
@@ -67,7 +60,8 @@
       "unit": "g"
      }
     }
-   }
+   },
+   "note": "Migros'un internet kataloğunda standart somun ekmek yok; yalnızca artizan, organik ve ambalajlı özel ürünler var. Bu yüzden ekmek tek mağazadan izlenir."
   },
   {
    "id": "pirinc",
@@ -130,10 +124,10 @@
      }
     },
     "sok": {
-     "url": "https://www.sokmarket.com.tr/tat-firik-bulgur-500-g-p-266",
+     "url": "https://www.sokmarket.com.tr/anadolu-mutfagi-pilavlik-bulgur-1-kg-p-5325",
      "pack": {
-      "size": 500,
-      "unit": "g"
+      "size": 1,
+      "unit": "kg"
      }
     }
    }
@@ -176,7 +170,7 @@
      }
     },
     "sok": {
-     "url": "https://www.sokmarket.com.tr/gedik-pilic-but-pirzola-kg-p-461813",
+     "url": "https://www.sokmarket.com.tr/gedik-pilic-baget-kg-p-460898",
      "pack": {
       "size": 1,
       "unit": "kg"
@@ -393,7 +387,7 @@
      }
     },
     "sok": {
-     "url": "https://www.sokmarket.com.tr/pembe-domates-kg-p-35389",
+     "url": "https://www.sokmarket.com.tr/domates-kg-p-32886",
      "pack": {
       "size": 1,
       "unit": "kg"
@@ -478,7 +472,7 @@
      }
     },
     "sok": {
-     "url": "https://www.sokmarket.com.tr/tat-beyaz-nohut-1-kg-p-601",
+     "url": "https://www.sokmarket.com.tr/anadolu-mutfagi-nohut-1-kg-p-9054",
      "pack": {
       "size": 1,
       "unit": "kg"
@@ -547,9 +541,9 @@
      }
     },
     "sok": {
-     "url": "https://www.sokmarket.com.tr/anadolu-mutfagi-iyotlu-tuz-125-g-p-4016",
+     "url": "https://www.sokmarket.com.tr/anadolu-mutfagi-tuz-750-g-p-5665",
      "pack": {
-      "size": 125,
+      "size": 750,
       "unit": "g"
      }
     }
