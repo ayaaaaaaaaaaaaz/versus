@@ -1,0 +1,74 @@
+name: Deploy site
+
+# Publishes the site to Cloudflare Pages.
+#
+# Runs after every human push to main, and is called by the daily collection
+# job once the day's prices are committed — a push made with the workflow's own
+# token does not trigger other workflows, so the collector has to ask.
+#
+# Needs two repository secrets, both free:
+#   CLOUDFLARE_API_TOKEN   a token with the "Cloudflare Pages: Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID  shown on the Cloudflare dashboard sidebar
+# Without them the job says so in its summary and stops cleanly instead of
+# failing, so the collection never goes red because deployment is not set up.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# Two deploys racing would publish in whatever order they finish. Queue them.
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Check deployment is configured
+        id: check
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Deploy skipped: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets are not set." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Always the tip of main: when called right after the collector pushes,
+      # the triggering commit is the one *before* the day's prices.
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Test
+        if: steps.check.outputs.ready == 'true'
+        run: npm test
+
+      - name: Build
+        if: steps.check.outputs.ready == 'true'
+        run: npm run build
+
+      - name: Publish to Cloudflare Pages
+        if: steps.check.outputs.ready == 'true'
+        run: npx wrangler pages deploy dist --project-name=versus --branch=main --commit-dirty=true

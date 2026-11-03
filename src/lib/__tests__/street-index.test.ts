@@ -15,9 +15,16 @@ import {
   rebase,
   toMonthly,
   weightedAggregate,
+  annualise,
+  contributions,
+  filterSales,
+  FRESH_ITEMS,
+  latestShelfPrices,
+  monthlyRates,
+  SALE_MAX_DAYS,
   type PriceObservation,
 } from '../street-index';
-import { BASKET } from '../../config/street-basket';
+import { BASKET, itemWeight } from '../../config/street-basket';
 
 /** Two items in different COICOP groups, so weights differ. */
 const TEST_BASKET = BASKET.filter((b) => ['ekmek', 'pilic-baget'].includes(b.id));
@@ -525,5 +532,174 @@ describe('CSV export', () => {
   it('exports the real bundle without throwing', () => {
     const csv = toCsv();
     expect(csv.split('\n').length).toBeGreaterThan(1);
+  });
+});
+
+describe('sale filter', () => {
+  const run = (prices: [string, number][]) =>
+    filterSales(prices.map(([d, p]) => obs(d, 'pilic-baget', 'migros', p)));
+
+  it('prices a V-shaped promotion at the regular price it interrupted', () => {
+    const out = run([['2026-01-01', 140], ['2026-01-02', 80], ['2026-01-03', 80], ['2026-01-04', 140]]);
+    expect(out.map((r) => r.unitPrice)).toEqual([140, 140, 140, 140]);
+    expect(out.map((r) => !!r.sale)).toEqual([false, true, true, false]);
+  });
+
+  it('accepts a return within 1% as the same price', () => {
+    const out = run([['2026-01-01', 139.95], ['2026-01-02', 79.9], ['2026-01-03', 140.5]]);
+    expect(out[1].unitPrice).toBe(139.95);
+  });
+
+  it('treats a drop that never comes back as a real price cut', () => {
+    const out = run([['2026-01-01', 140], ['2026-01-02', 120], ['2026-01-03', 120]]);
+    expect(out.map((r) => r.unitPrice)).toEqual([140, 120, 120]);
+    expect(out.some((r) => r.sale)).toBe(false);
+  });
+
+  it('does not call a drop a sale when the return lands on a different price', () => {
+    // Produce: down, then up past where it started. A genuine move each way.
+    const out = run([['2026-01-01', 50], ['2026-01-02', 40], ['2026-01-03', 70]]);
+    expect(out.map((r) => r.unitPrice)).toEqual([50, 40, 70]);
+  });
+
+  it('ignores a return that comes after the window', () => {
+    const late = new Date(Date.UTC(2026, 0, 2 + SALE_MAX_DAYS + 1)).toISOString().slice(0, 10);
+    const out = run([['2026-01-01', 140], ['2026-01-02', 80], [late, 140]]);
+    expect(out[1].unitPrice).toBe(80);
+  });
+
+  it('keeps stores and products apart', () => {
+    const rows = [
+      obs('2026-01-01', 'pilic-baget', 'migros', 140),
+      obs('2026-01-02', 'pilic-baget', 'sok', 80),
+      obs('2026-01-03', 'pilic-baget', 'migros', 140),
+    ];
+    expect(filterSales(rows)[1].unitPrice).toBe(80);
+  });
+
+  it('stops a promotion from moving the index', () => {
+    const basket = TEST_BASKET;
+    const rows = ['2026-01-01', '2026-01-02', '2026-01-03'].flatMap((d, i) => [
+      obs(d, 'ekmek', 'migros', 10),
+      obs(d, 'pilic-baget', 'migros', i === 1 ? 70 : 140),
+    ]);
+    const filtered = buildDailyIndex(rows, { basket });
+    const kept = buildDailyIndex(rows, { basket, sales: 'keep' });
+    expect(filtered.points.map((p) => p.value)).toEqual([100, 100, 100]);
+    expect(kept.points[1].value).toBeLessThan(100);
+  });
+});
+
+describe('excluding items', () => {
+  it('keeps the full-basket weights instead of handing them to siblings', () => {
+    // Tomatoes and lentils share CP0117. Without tomatoes, lentils must keep
+    // their own weight, not inherit the whole group.
+    const basket = BASKET.filter((b) => ['domates', 'mercimek', 'ekmek'].includes(b.id));
+    const rows = [
+      obs('2026-01-01', 'domates', 'migros', 10),
+      obs('2026-01-01', 'mercimek', 'migros', 10),
+      obs('2026-01-01', 'ekmek', 'migros', 10),
+      obs('2026-01-02', 'domates', 'migros', 10),
+      obs('2026-01-02', 'mercimek', 'migros', 20),
+      obs('2026-01-02', 'ekmek', 'migros', 10),
+    ];
+    const r = buildDailyIndex(rows, { basket, exclude: ['domates'] });
+    const w = (id: string) => itemWeight(BASKET.find((b) => b.id === id)!, basket);
+    const expected = 100 * (w('mercimek') * 2 + w('ekmek')) / (w('mercimek') + w('ekmek'));
+    expect(r.points.at(-1)!.value).toBeCloseTo(expected, 8);
+    expect(r.points.at(-1)!.relatives.domates).toBeUndefined();
+  });
+
+  it('flags the fresh produce in the real basket', () => {
+    expect(FRESH_ITEMS).toEqual(expect.arrayContaining(['domates', 'elma']));
+    expect(FRESH_ITEMS).not.toContain('mercimek');
+  });
+});
+
+describe('monthlyRates', () => {
+  const days = (month: string, n: number, value: (d: number) => number) =>
+    Array.from({ length: n }, (_, i) => ({
+      date: `${month}-${String(i + 1).padStart(2, '0')}`,
+      value: value(i + 1),
+    }));
+
+  it('gives the first month no rate', () => {
+    expect(monthlyRates(days('2026-01', 31, () => 100))).toEqual([]);
+  });
+
+  it('compares averages when both months are well covered', () => {
+    const r = monthlyRates([...days('2026-01', 31, () => 100), ...days('2026-02', 28, () => 103)]);
+    expect(r[0].method).toBe('average');
+    expect(r[0].changePct).toBeCloseTo(3, 8);
+    expect(r[0].complete).toBe(true);
+  });
+
+  it('falls back to end-to-end when the previous month is thin', () => {
+    const points = [
+      { date: '2026-01-30', value: 100 },
+      { date: '2026-01-31', value: 102 },
+      ...days('2026-02', 28, (d) => (d === 28 ? 104.04 : 50)),
+    ];
+    const r = monthlyRates(points);
+    expect(r[0].method).toBe('end-to-end');
+    expect(r[0].from).toBe('2026-01-31');
+    expect(r[0].changePct).toBeCloseTo(2, 8);
+  });
+
+  it('marks a month still in progress', () => {
+    const r = monthlyRates([...days('2026-01', 31, () => 100), ...days('2026-02', 3, () => 101)]);
+    expect(r[0].complete).toBe(false);
+    expect(r[0].method).toBe('end-to-end');
+  });
+
+  it('annualises by compounding', () => {
+    expect(annualise(1)).toBeCloseTo((1.01 ** 12 - 1) * 100, 10);
+    expect(annualise(0)).toBe(0);
+  });
+});
+
+describe('contributions', () => {
+  it('add up exactly to the index move', () => {
+    const point = buildDailyIndex().points.at(-1)!;
+    const total = contributions(point).reduce((a, c) => a + c.points, 0);
+    expect(total).toBeCloseTo(point.value - 100, 8);
+  });
+
+  it('attribute nothing to an item that did not move', () => {
+    const basket = TEST_BASKET;
+    const rows = [
+      ...['migros'].flatMap((s) => [obs('2026-01-01', 'ekmek', s, 10), obs('2026-01-01', 'pilic-baget', s, 10)]),
+      ...['migros'].flatMap((s) => [obs('2026-01-02', 'ekmek', s, 10), obs('2026-01-02', 'pilic-baget', s, 15)]),
+    ];
+    const c = contributions(buildDailyIndex(rows, { basket }).points.at(-1)!, basket);
+    expect(c.find((x) => x.itemId === 'ekmek')!.points).toBe(0);
+    expect(c[0].itemId).toBe('pilic-baget');
+  });
+});
+
+describe('latestShelfPrices', () => {
+  it('keeps the newest price per store', () => {
+    const r = latestShelfPrices([
+      obs('2026-01-01', 'ekmek', 'migros', 10),
+      obs('2026-01-03', 'ekmek', 'migros', 12),
+      obs('2026-01-03', 'ekmek', 'sok', 11),
+    ]);
+    expect(r.ekmek.migros.shelfPrice).toBe(12);
+    expect(r.ekmek.sok.date).toBe('2026-01-03');
+  });
+
+  it('drops a price older than the carry-forward window', () => {
+    const r = latestShelfPrices([
+      obs('2026-01-01', 'ekmek', 'migros', 10),
+      obs('2026-01-20', 'ekmek', 'sok', 11),
+    ]);
+    expect(r.ekmek.migros).toBeUndefined();
+    expect(r.ekmek.sok.shelfPrice).toBe(11);
+  });
+
+  it('reads the real bundle', () => {
+    // Not "every item": a store blocking us for a week legitimately empties a
+    // row, and the deploy runs these tests, so they must not depend on that.
+    expect(Object.keys(latestShelfPrices()).length).toBeGreaterThan(0);
   });
 });

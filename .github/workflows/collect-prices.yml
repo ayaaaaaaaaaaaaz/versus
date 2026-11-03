@@ -81,4 +81,16 @@ jobs:
             git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && break
             sleep 5
           done
+          # The app imports one bundled file, not the daily ones. It is rebuilt
+          # only now, after the rebase, from whatever data/prices holds — so it
+          # is derived output and can never be the cause of a merge conflict.
+          npm run bundle:prices
+          git add src/data/street-prices.json
+          git diff --cached --quiet || git commit --amend --no-edit
           git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  # Publish the new day. Skips itself cleanly when deployment secrets are absent.
+  deploy:
+    needs: collect
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

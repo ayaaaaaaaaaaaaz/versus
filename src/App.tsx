@@ -5,6 +5,7 @@ import { AssetRace } from './components/AssetRace';
 import { ComparisonChart } from './components/ComparisonChart';
 import { SourceToggle } from './components/SourceToggle';
 import { StreetChart } from './components/StreetChart';
+import { StreetInflation } from './components/StreetInflation';
 import { StreetMethodology } from './components/StreetMethodology';
 import {
   CollectionLog,
@@ -424,22 +425,24 @@ function Versus({ params, patch }: BodyProps) {
             title="Rafta ne oluyor"
             description={
               <>
-                Resmî gıda endeksinin yanına, kendi topladığımız market fiyatlarından kurulan bir
-                sepet. Alttaki çizgi 2013’ten bu yana TÜİK’in kendi madde fiyatlarıyla hesaplanır;
-                yeşil işaret, kendi ölçümümüzün başladığı günü gösterir.
+                Her sabah Migros ve ŞOK’un sitelerinden 25 temel gıdanın fiyatı kaydedilir ve
+                bunlardan kendi gıda enflasyonumuz hesaplanır. Altta, aynı sepetin 2013’ten bu yana
+                TÜİK’in kendi madde fiyatlarıyla hesaplanmış uzun serisi var.
               </>
             }
           >
             <div className="space-y-4">
-              <StreetChart />
-              <div className="grid gap-4 lg:grid-cols-2">
+              <StreetInflation />
+              <ItemMovesTable />
+              <div className="grid gap-4 lg:grid-cols-3">
                 <StreetReadiness />
                 <CollectionLog />
-              </div>
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-                <ItemMovesTable />
                 <ShrinkflationList />
               </div>
+              <h3 className="pt-6 text-sm font-semibold text-ink-100">
+                Aynı sepet, 2013’ten bu yana, TÜİK’in kendi madde fiyatlarıyla
+              </h3>
+              <StreetChart />
             </div>
           </Section>
 

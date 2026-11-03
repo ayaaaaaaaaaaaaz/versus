@@ -1,6 +1,12 @@
 import { BASKET, COICOP_WEIGHTS, basketMeta } from '../config/street-basket';
 import foodPrices from '../data/food-prices.json';
-import { CARRY_FORWARD_DAYS, MEANINGFUL_DAYS, streetMeta } from '../lib/street-index';
+import {
+  CARRY_FORWARD_DAYS,
+  MEANINGFUL_DAYS,
+  MIN_MONTH_DAYS,
+  SALE_MAX_DAYS,
+  streetMeta,
+} from '../lib/street-index';
 import { PriceDownload } from './StreetPanels';
 
 const Panel = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -68,6 +74,37 @@ export function StreetMethodology() {
           <p>
             Ana endeks <strong className="text-ink-200">normal raf fiyatlarını</strong> kullanır.
             İndirimli fiyatlar ayrıca saklanır ve ayrı bir seri olarak hesaplanabilir.
+          </p>
+        </Panel>
+
+        <Panel title="Geçici kampanyalar nasıl ayıklanıyor">
+          <p>
+            Migros’un ürün verisi indirimden önceki fiyatı değil, o günkü satış fiyatını verir. İki
+            günlük bir tavuk kampanyası (139,95 → 79,90 → 139,95 ₺) bu yüzden %43’lük bir çöküş ve
+            ardından %75’lik bir artış gibi görünür; bir ay tesadüfen kampanya gününde biterse, hiç
+            olmamış bir düşüş raporlanır.
+          </p>
+          <p>
+            Çözüm, Nakamura ve Steinsson’ın (2008) <strong className="text-ink-200">V-biçimli
+            indirim filtresi</strong>: fiyat düşer ve {SALE_MAX_DAYS} gün içinde{' '}
+            <em>aynı</em> fiyata (%1 tolerans) geri dönerse, aradaki günler kampanyadır ve kesintiye
+            uğrayan normal fiyatla hesaplanır. “Aynı fiyata dönüş” şartı, kampanyayı gerçekten
+            oynayan sebze fiyatından ayırır. Henüz geri dönmemiş bir düşüş gerçek sayılır; dönerse
+            o günler sonradan düzeltilir — yani son iki haftanın rakamları revize olabilir.
+          </p>
+          <p className="text-ink-500">
+            TÜİK herkese açık indirimleri TÜFE’ye dahil eder; bu yüzden kampanyalar dahil seri de
+            grafikte kesikli çizgiyle duruyor. Ay ortalaması alındığında iki seri birbirine yaklaşır.
+          </p>
+        </Panel>
+
+        <Panel title="Aylık enflasyon nasıl hesaplanıyor">
+          <p>
+            TÜİK gibi: ayın ortalama endeksi, önceki ayın ortalamasına karşı. Bu ancak iki ay da en
+            az {MIN_MONTH_DAYS} gün ölçüldüğünde anlamlı; ölçümün ilk ayı gibi ince bir aya karşı,
+            ayın son günü önceki ayın son gününe karşı (“uçtan uca”) karşılaştırılır ve tabloda
+            böyle yazılır. Taze sebze-meyve hariç seri, TÜİK’in işlenmemiş gıdayı dışlayan çekirdek
+            göstergeleri gibi, mevsimin gürültüsünü ayırmak için yanında verilir.
           </p>
         </Panel>
       </div>

@@ -12,13 +12,10 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import {
-  buildDailyIndex,
   buildTuikBasketIndex,
   officialFoodIndex,
   readiness,
   rebase,
-  toMonthly,
-  type MonthlyPoint,
 } from '../lib/street-index';
 import { compact, formatMultiplier, formatPct } from '../lib/format';
 
@@ -28,7 +25,6 @@ interface Row {
   basket: number | null;
   official: number | null;
   gap: number | null;
-  street: number | null;
 }
 
 const monthToX = (month: string) => {
@@ -49,7 +45,6 @@ function Tip({ active, payload }: { active?: boolean; payload?: { payload: Row }
     ['Sepetimiz (TÜİK fiyatlarıyla)', p.basket == null ? '—' : compact(p.basket), 'text-gold-400'],
     ['Resmî gıda endeksi', p.official == null ? '—' : compact(p.official), 'text-ink-300'],
   ];
-  if (p.street != null) rows.push(['Sokak endeksi', compact(p.street), 'text-mint-400']);
 
   return (
     <div className="rounded-xl border border-ink-600/70 bg-ink-900/95 px-3.5 py-2.5 shadow-2xl backdrop-blur">
@@ -89,13 +84,11 @@ const CHART = (() => {
     const basket = rebase(basketRaw, anchorMonth);
     const official = rebase(officialFoodIndex(), anchorMonth);
 
-    // Our own collected index, if there is enough of it to plot.
-    const street: MonthlyPoint[] = collected.meaningful
-      ? rebase(toMonthly(buildDailyIndex().points), anchorMonth)
-      : [];
-
+    // Our own index is not drawn here. It starts in 2026 and TÜİK's commodity
+    // series stops months earlier, so there is no shared month to splice it
+    // onto, and a few weeks on a thirteen-year axis would be a dot anyway. It
+    // has its own daily chart; this one only marks where it begins.
     const officialBy = new Map(official.map((p) => [p.month, p.value]));
-    const streetBy = new Map(street.map((p) => [p.month, p.value]));
 
     const out: Row[] = basket.map((p) => {
       const off = officialBy.get(p.month) ?? null;
@@ -105,7 +98,6 @@ const CHART = (() => {
         basket: p.value,
         official: off,
         gap: off != null && off !== 0 ? (p.value / off - 1) * 100 : null,
-        street: streetBy.get(p.month) ?? null,
       };
     });
 
@@ -143,11 +135,6 @@ export function StreetChart() {
           <span className="flex items-center gap-1.5 text-ink-400">
             <span className="h-0.5 w-4 rounded bg-ink-300" /> Resmî gıda endeksi
           </span>
-          {state.meaningful && (
-            <span className="flex items-center gap-1.5 text-ink-400">
-              <span className="h-0.5 w-4 rounded bg-mint-400" /> Sokak endeksi
-            </span>
-          )}
         </div>
         <button
           type="button"
@@ -223,17 +210,6 @@ export function StreetChart() {
               dot={false}
               animationDuration={700}
             />
-            {state.meaningful && (
-              <Line
-                type="monotone"
-                dataKey="street"
-                stroke="var(--color-mint-400)"
-                strokeWidth={2.5}
-                dot={false}
-                connectNulls
-                animationDuration={700}
-              />
-            )}
             {startX != null && (
               <ReferenceLine
                 x={startX}
