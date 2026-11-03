@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { BASKET } from '../config/street-basket';
 import {
   MEANINGFUL_DAYS,
+  buildDailyIndex,
   collectionDays,
   detectShrinkflation,
-  itemMoves,
+  latestShelfPrices,
   readiness,
   streetMeta,
   toCsv,
@@ -78,12 +80,61 @@ export function StreetReadiness() {
   );
 }
 
-/** Ranked per-item movement since the base day. */
+const STORES = [
+  ['migros', 'Migros'],
+  ['sok', 'ŞOK'],
+] as const;
+
+const UNIT_LABEL: Record<string, string> = { kg: 'kg', l: 'L', unit: 'adet' };
+
+/** A tiny inline trend line. Plain SVG: a chart library per row would be absurd. */
+function Spark({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const d = values
+    .map((v, i) => `${i ? 'L' : 'M'}${((i / (values.length - 1)) * 64).toFixed(1)},${(18 - ((v - min) / span) * 16).toFixed(1)}`)
+    .join('');
+  const up = values.at(-1)! > values[0] + 1e-9;
+  const down = values.at(-1)! < values[0] - 1e-9;
+  return (
+    <svg viewBox="0 0 64 20" className="h-5 w-16" aria-hidden>
+      <path
+        d={d}
+        fill="none"
+        strokeWidth={1.5}
+        stroke={up ? 'var(--color-ember-400)' : down ? 'var(--color-mint-400)' : 'var(--color-ink-500)'}
+      />
+    </svg>
+  );
+}
+
+/**
+ * The prices we actually recorded, store by store, with the change since the
+ * base day.
+ *
+ * The shelf price is what the page showed. The change column and the trend
+ * line are read straight off the index's own per-item relatives — the same
+ * sale filter, the same carry-forward, the same stores — so the table cannot
+ * disagree with the headline. Comparing raw first and last days instead would
+ * let one store's bad collection day swing an item by twenty points.
+ */
 export function ItemMovesTable() {
-  const moves = useMemo(() => itemMoves(), []);
+  const shelf = useMemo(() => latestShelfPrices(), []);
+  const { trend, moves } = useMemo(() => {
+    const points = buildDailyIndex().points;
+    const trend: Record<string, number[]> = {};
+    for (const item of BASKET) trend[item.id] = points.map((p) => p.relatives[item.id]).filter((v) => v != null);
+    const last = points.at(-1);
+    const moves = new Map(
+      Object.entries(last?.relatives ?? {}).map(([id, r]) => [id, { changePct: (r - 1) * 100 }]),
+    );
+    return { trend, moves: points.length > 1 ? moves : new Map<string, { changePct: number }>() };
+  }, []);
   const state = readiness();
 
-  if (!moves.length) {
+  if (!moves.size) {
     return (
       <div className="panel rounded-2xl px-5 py-10 text-center text-sm text-ink-400">
         Henüz karşılaştırılacak ikinci bir gün yok.
@@ -91,58 +142,74 @@ export function ItemMovesTable() {
     );
   }
 
-  const flat = moves.every((m) => Math.abs(m.changePct) < 0.005);
+  const rows = BASKET.map((item) => ({ item, move: moves.get(item.id), prices: shelf[item.id] ?? {} }))
+    .sort((a, b) => (b.move?.changePct ?? -Infinity) - (a.move?.changePct ?? -Infinity));
 
   return (
     <div className="panel overflow-hidden rounded-2xl">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-ink-800 bg-ink-950/50 text-[10px] uppercase tracking-wider text-ink-500">
-            <th className="px-4 py-2.5 text-left font-medium">Kalem</th>
-            <th className="px-4 py-2.5 text-right font-medium">İlk gün</th>
-            <th className="px-4 py-2.5 text-right font-medium">Son gün</th>
-            <th className="px-4 py-2.5 text-right font-medium">Değişim</th>
-          </tr>
-        </thead>
-        <tbody>
-          {moves.map((m, i) => (
-            <motion.tr
-              key={m.itemId}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: Math.min(i * 0.02, 0.3) }}
-              className="border-t border-ink-800/70"
-            >
-              <td className="px-4 py-2 text-ink-200">
-                {m.name}
-                <span className="ml-2 font-mono text-[10px] text-ink-600">
-                  {m.stores.join('+')}
-                </span>
-              </td>
-              <td className="px-4 py-2 text-right font-mono text-xs tabular text-ink-500">
-                {formatTRY(m.basePrice)}
-              </td>
-              <td className="px-4 py-2 text-right font-mono text-xs tabular text-ink-300">
-                {formatTRY(m.latestPrice)}
-              </td>
-              <td
-                className={`px-4 py-2 text-right font-mono text-xs tabular ${
-                  m.changePct > 0.005 ? 'text-ember-400' : m.changePct < -0.005 ? 'text-mint-400' : 'text-ink-500'
-                }`}
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-ink-800 px-4 py-3">
+        <h3 className="text-sm font-semibold text-ink-100">Raf fiyatları</h3>
+        <span className="font-mono text-[10px] text-ink-500">son ölçüm {state.lastDay ?? '—'}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-ink-800 bg-ink-950/50 text-[10px] uppercase tracking-wider text-ink-500">
+              <th className="px-4 py-2.5 text-left font-medium">Kalem</th>
+              {STORES.map(([id, name]) => (
+                <th key={id} className="px-3 py-2.5 text-right font-medium">{name}</th>
+              ))}
+              <th className="hidden px-3 py-2.5 text-center font-medium sm:table-cell">Seyir</th>
+              <th className="px-4 py-2.5 text-right font-medium">Değişim</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ item, move, prices }, i) => (
+              <motion.tr
+                key={item.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: Math.min(i * 0.02, 0.3) }}
+                className="border-t border-ink-800/70"
               >
-                {m.changePct >= 0 ? '+' : ''}
-                {formatPct(m.changePct, 1)}
-              </td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
-      {flat && (
-        <p className="border-t border-ink-800 px-4 py-2.5 text-[11px] leading-relaxed text-ink-500">
-          Tüm değişimler sıfır: yalnızca {state.days} günlük veri var, yani ilk gün aynı zamanda son
-          gün. Bu tablo ikinci toplama gününden itibaren anlam kazanır.
-        </p>
-      )}
+                <td className="px-4 py-2 text-ink-200">{item.name}</td>
+                {STORES.map(([id]) => {
+                  const p = prices[id];
+                  if (!p) {
+                    return <td key={id} className="px-3 py-2 text-right font-mono text-xs text-ink-700">—</td>;
+                  }
+                  const onSale = p.discountedPrice != null && p.discountedPrice < p.shelfPrice;
+                  return (
+                    <td key={id} className="px-3 py-2 text-right font-mono text-xs tabular">
+                      <div className={onSale ? 'text-mint-400' : 'text-ink-300'}>
+                        {formatTRY(onSale ? p.discountedPrice! : p.shelfPrice)} ₺
+                      </div>
+                      <div className="text-[10px] text-ink-600">
+                        {onSale && <span className="mr-1 line-through">{formatTRY(p.shelfPrice)}</span>}
+                        {formatTRY(onSale ? p.discountedPrice! / p.baseQuantity : p.unitPrice)}/{UNIT_LABEL[item.unit]}
+                      </div>
+                    </td>
+                  );
+                })}
+                <td className="hidden px-3 py-2 sm:table-cell">
+                  <div className="flex justify-center"><Spark values={trend[item.id]} /></div>
+                </td>
+                <td
+                  className={`px-4 py-2 text-right font-mono text-xs tabular ${
+                    !move ? 'text-ink-700' : move.changePct > 0.005 ? 'text-ember-400' : move.changePct < -0.005 ? 'text-mint-400' : 'text-ink-500'
+                  }`}
+                >
+                  {move ? `${move.changePct >= 0 ? '+' : ''}${formatPct(move.changePct, 1)}` : '—'}
+                </td>
+              </motion.tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="border-t border-ink-800 px-4 py-2.5 text-[11px] leading-relaxed text-ink-500">
+        Fiyat, ürünün o mağazadaki son kaydıdır; yeşil olanlar indirimli. Değişim, {state.firstDay ?? 'ilk gün'}
+        ’den bu yana, geçici kampanyalar ayıklanarak hesaplanır — endeksle aynı yöntem.
+      </p>
     </div>
   );
 }

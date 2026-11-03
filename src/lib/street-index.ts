@@ -104,6 +104,78 @@ export function weightedAggregate(
 }
 
 // ---------------------------------------------------------------------------
+// Temporary promotions
+// ---------------------------------------------------------------------------
+
+/** A drop that returns to the old price within this many days is a sale. */
+export const SALE_MAX_DAYS = 14;
+/** How close to the old price the return must land to count as "the same". */
+export const SALE_RETURN_TOLERANCE = 0.01;
+
+/**
+ * Replaces temporary promotions with the regular price they interrupted.
+ *
+ * Migros's product data carries the price on sale today, not the price it was
+ * marked down from, so a two-day chicken promotion — 139,95 → 79,90 → 139,95 —
+ * arrives looking like a 43% collapse followed by a 75% rise. In a daily index
+ * that swings the whole basket by four points and back, and any month that
+ * happens to end on a promotion day reports a fall that never happened.
+ *
+ * The rule is the V-shaped sale filter from Nakamura & Steinsson (2008): a drop
+ * is a sale when the price comes back to where it was (within 1%) inside
+ * SALE_MAX_DAYS. Requiring the *same* price is what separates a promotion from
+ * produce, whose price genuinely moves and rarely lands back on the exact
+ * figure it left. A drop with no return yet is treated as real; if the price
+ * later returns, those days are reclassified — so the last fortnight of the
+ * index can be revised, and the methodology says so.
+ *
+ * Works per product per store, on the unit price. Rows come back in the same
+ * shape with unitPrice replaced where a sale was found, plus a `sale` flag.
+ */
+export function filterSales<T extends PriceObservation>(rows: T[]): (T & { sale?: boolean })[] {
+  const series = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = `${row.itemId}|${row.store}`;
+    series.set(key, [...(series.get(key) ?? []), row]);
+  }
+
+  const replaced = new Map<T, number>();
+  for (const list of series.values()) {
+    const sorted = list.filter((r) => r.unitPrice > 0).sort((a, b) => a.date.localeCompare(b.date));
+    let regular = sorted[0]?.unitPrice;
+    let i = 1;
+    while (i < sorted.length) {
+      const price = sorted[i].unitPrice;
+      if (price >= regular * (1 - SALE_RETURN_TOLERANCE)) {
+        regular = price;
+        i++;
+        continue;
+      }
+      // A drop. Look for a return to the old price inside the window.
+      let back = -1;
+      for (let j = i + 1; j < sorted.length; j++) {
+        if (dayDiff(sorted[i].date, sorted[j].date) > SALE_MAX_DAYS) break;
+        if (Math.abs(sorted[j].unitPrice / regular - 1) <= SALE_RETURN_TOLERANCE) {
+          back = j;
+          break;
+        }
+      }
+      if (back < 0) {
+        regular = price;
+        i++;
+        continue;
+      }
+      for (let k = i; k < back; k++) replaced.set(sorted[k], regular);
+      i = back;
+    }
+  }
+
+  return rows.map((row) =>
+    replaced.has(row) ? { ...row, unitPrice: replaced.get(row)!, sale: true } : row,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Daily index
 // ---------------------------------------------------------------------------
 
@@ -119,6 +191,8 @@ export interface IndexPoint {
   carriedForward: number;
   /** Share of total basket weight represented, 0–1. */
   coverage: number;
+  /** Each contributing item's price relative to the base day. */
+  relatives: Record<string, number>;
 }
 
 export interface DailyIndex {
@@ -146,9 +220,20 @@ function calendarRange(from: string, to: string): string[] {
 interface BuildOptions {
   /** 'regular' is the headline basis; 'discounted' is kept for comparison only. */
   basis?: 'regular' | 'discounted';
+  /**
+   * 'filter' (the default) prices promotions at the regular price they
+   * interrupted; 'keep' uses whatever the page showed that day.
+   */
+  sales?: 'filter' | 'keep';
   carryForwardDays?: number;
   baseCoverage?: number;
   basket?: BasketItem[];
+  /**
+   * Items left out of the calculation. Weights are still worked out against
+   * the whole basket and then renormalised, so leaving out tomatoes does not
+   * hand their weight to lentils just because both are CP0117.
+   */
+  exclude?: string[];
 }
 
 /**
@@ -166,8 +251,15 @@ export function buildDailyIndex(
     basis = 'regular',
     carryForwardDays = CARRY_FORWARD_DAYS,
     baseCoverage = BASE_COVERAGE,
-    basket = BASKET,
+    basket: fullBasket = BASKET,
+    exclude = [],
+    sales = 'filter',
   } = options;
+
+  const basket = fullBasket.filter((b) => !exclude.includes(b.id));
+  // The discounted basis exists to show promotions, so filtering them out of
+  // it would defeat the comparison.
+  const input = sales === 'filter' && basis === 'regular' ? filterSales(rows) : rows;
 
   const priceOf = (o: PriceObservation): number | null => {
     if (basis === 'regular') return o.unitPrice > 0 ? o.unitPrice : null;
@@ -177,11 +269,11 @@ export function buildDailyIndex(
   };
 
   const tracked = new Set(basket.map((b) => b.id));
-  const weights = Object.fromEntries(basket.map((b) => [b.id, itemWeight(b, basket)]));
+  const weights = Object.fromEntries(basket.map((b) => [b.id, itemWeight(b, fullBasket)]));
 
   // date -> itemId -> store -> price
   const observed = new Map<string, Map<string, Record<string, number>>>();
-  for (const row of rows) {
+  for (const row of input) {
     if (!tracked.has(row.itemId)) continue;
     const price = priceOf(row);
     if (price == null) continue;
@@ -271,6 +363,7 @@ export function buildDailyIndex(
       itemsDropped: dropped,
       carriedForward: carried,
       coverage: aggregate.coverage,
+      relatives,
     });
   }
 
@@ -309,6 +402,118 @@ export function rebase(series: MonthlyPoint[], month: string): MonthlyPoint[] {
   if (!anchor || anchor.value === 0) return series;
   return series.map((p) => ({ ...p, value: (p.value / anchor.value) * 100 }));
 }
+
+/** Days a month needs before its average is trusted as that month's level. */
+export const MIN_MONTH_DAYS = 20;
+
+export interface MonthlyRate {
+  month: string;
+  /** Percent change on the previous month. */
+  changePct: number;
+  /**
+   * 'average': mean of this month against mean of the last, which is how TÜİK
+   * reports monthly CPI. 'end-to-end': last day against the previous month's
+   * last day, used when either month is too thin for an average to mean much.
+   */
+  method: 'average' | 'end-to-end';
+  from: string;
+  to: string;
+  /** Days of index in this month. */
+  days: number;
+  /** Whether collection reached the month's final calendar day. */
+  complete: boolean;
+}
+
+const lastDayOfMonth = (month: string) => {
+  const [y, m] = month.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+};
+
+/**
+ * Month-on-month inflation from the daily index.
+ *
+ * The first month has nothing before it and gets no rate. A month only has an
+ * average-based rate when it and the month before both have at least
+ * MIN_MONTH_DAYS of index: averaging two days of September against thirty-one
+ * of October would compare a snapshot with a month. Otherwise the rate falls
+ * back to end-to-end, and says so.
+ */
+export function monthlyRates(points: { date: string; value: number }[]): MonthlyRate[] {
+  const byMonth = new Map<string, { date: string; value: number }[]>();
+  for (const p of [...points].sort((a, b) => a.date.localeCompare(b.date))) {
+    const month = p.date.slice(0, 7);
+    byMonth.set(month, [...(byMonth.get(month) ?? []), p]);
+  }
+  const months = [...byMonth.keys()].sort();
+  const mean = (xs: { value: number }[]) => xs.reduce((a, p) => a + p.value, 0) / xs.length;
+
+  const out: MonthlyRate[] = [];
+  for (let i = 1; i < months.length; i++) {
+    const prev = byMonth.get(months[i - 1])!;
+    const cur = byMonth.get(months[i])!;
+    const average = prev.length >= MIN_MONTH_DAYS && cur.length >= MIN_MONTH_DAYS;
+    const before = average ? mean(prev) : prev.at(-1)!.value;
+    const after = average ? mean(cur) : cur.at(-1)!.value;
+    out.push({
+      month: months[i],
+      changePct: (after / before - 1) * 100,
+      method: average ? 'average' : 'end-to-end',
+      from: average ? prev[0].date : prev.at(-1)!.date,
+      to: cur.at(-1)!.date,
+      days: cur.length,
+      complete: cur.at(-1)!.date === lastDayOfMonth(months[i]),
+    });
+  }
+  return out;
+}
+
+/** A monthly rate compounded over twelve months. */
+export const annualise = (monthlyPct: number) => ((1 + monthlyPct / 100) ** 12 - 1) * 100;
+
+export interface Contribution {
+  itemId: string;
+  name: string;
+  /** Price relative to the base day. */
+  relative: number;
+  /** Share of the weight in use on this day, 0–1. */
+  weightShare: number;
+  /** Index points this item adds to the move away from 100. */
+  points: number;
+}
+
+/**
+ * How much of the index's move each item is responsible for.
+ *
+ * Because the index is a weighted arithmetic mean of relatives, the move from
+ * 100 splits exactly into one term per item: its weight share times its own
+ * change. The terms add up to the headline, so "tomatoes drove it" is a sum,
+ * not an impression.
+ */
+export function contributions(
+  point: IndexPoint,
+  basket: BasketItem[] = BASKET,
+): Contribution[] {
+  const used = basket.filter((b) => point.relatives[b.id] != null);
+  const weights = Object.fromEntries(used.map((b) => [b.id, itemWeight(b, basket)]));
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (total <= 0) return [];
+  return used
+    .map((b) => {
+      const relative = point.relatives[b.id];
+      const weightShare = weights[b.id] / total;
+      return {
+        itemId: b.id,
+        name: b.name,
+        relative,
+        weightShare,
+        points: weightShare * (relative - 1) * 100,
+      };
+    })
+    .sort((a, b) => b.points - a.points);
+}
+
+/** Items flagged as fresh produce, for the excluding-fresh index. */
+export const FRESH_ITEMS = BASKET.filter((b) => b.fresh).map((b) => b.id);
 
 /**
  * The same basket and weights, priced with TÜİK's own commodity series.
@@ -445,15 +650,15 @@ export interface ItemMove {
 /**
  * Per-item price change between the base day and the latest day, ranked.
  *
- * Uses the same Jevons relative the index itself uses, so the table cannot
- * disagree with the headline number it sits underneath.
+ * Uses the same Jevons relative and the same sale filter the index itself
+ * uses, so the table cannot disagree with the headline number it sits under.
  */
 export function itemMoves(
   rows: PriceObservation[] = observations,
   basket: BasketItem[] = BASKET,
 ): ItemMove[] {
   const byDate = new Map<string, Map<string, Record<string, number>>>();
-  for (const row of rows) {
+  for (const row of filterSales(rows)) {
     if (!(row.unitPrice > 0)) continue;
     const byItem = byDate.get(row.date) ?? new Map();
     const stores = byItem.get(row.itemId) ?? {};
@@ -488,6 +693,46 @@ export function itemMoves(
     });
   }
   return out.sort((a, b) => b.changePct - a.changePct);
+}
+
+export interface ShelfPrice {
+  date: string;
+  /** Price on the label, in lira. */
+  shelfPrice: number;
+  /** Promotional price, when the store shows one. */
+  discountedPrice: number | null;
+  unitPrice: number;
+  baseQuantity: number;
+  source: string;
+}
+
+/**
+ * The most recent recorded price for every item at every store.
+ *
+ * A price older than CARRY_FORWARD_DAYS before the latest collection is left
+ * out, the same rule the index applies, so the table never shows a number the
+ * index has already stopped using.
+ */
+export function latestShelfPrices(
+  rows: PriceObservation[] = observations,
+): Record<string, Record<string, ShelfPrice>> {
+  const last = rows.reduce((m, r) => (r.date > m ? r.date : m), '');
+  const out: Record<string, Record<string, ShelfPrice>> = {};
+  for (const r of rows) {
+    if (!(r.unitPrice > 0) || dayDiff(r.date, last) > CARRY_FORWARD_DAYS) continue;
+    const stores = (out[r.itemId] ??= {});
+    const seen = stores[r.store];
+    if (seen && seen.date >= r.date) continue;
+    stores[r.store] = {
+      date: r.date,
+      shelfPrice: r.regularPrice,
+      discountedPrice: r.discountedPrice,
+      unitPrice: r.unitPrice,
+      baseQuantity: r.baseQuantity,
+      source: r.source,
+    };
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

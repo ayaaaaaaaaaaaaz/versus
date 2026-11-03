@@ -67,7 +67,6 @@ function loadManual(knownItems) {
         regularPrice: shelfPrice,
         discountedPrice: null,
         baseQuantity: Number(baseQuantity.toPrecision(8)),
-        productName: (r.note ?? '').trim() || null,
         packMismatch: false,
         source: 'manual',
       });
@@ -114,7 +113,6 @@ const main = () => {
         regularPrice: o.regularPrice,
         discountedPrice: o.discountedPrice ?? null,
         baseQuantity: o.baseQuantity,
-        productName: o.productName ?? null,
         packMismatch: o.packMismatch === true,
         source: o.source ?? 'scraped',
       });
@@ -151,8 +149,9 @@ const main = () => {
         days,
         observations,
       },
-      null,
-      1,
+      // No indentation: this file is imported into the app bundle and grows by
+      // ~50 rows a day, so whitespace would be the largest thing in it. The
+      // daily files under data/prices stay readable for anyone auditing.
     ) + '\n',
   );
 

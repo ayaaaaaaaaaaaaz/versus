@@ -53,6 +53,12 @@ export interface BasketItem {
   unit: BaseUnit;
   /** Why an item has no TÜİK counterpart, when tuikCommodity is null. */
   note?: string;
+  /**
+   * Fresh fruit and vegetables. Their prices swing with the harvest, so the
+   * index is also reported without them, the way TÜİK's core measures leave
+   * out unprocessed food.
+   */
+  fresh?: boolean;
   stores: { migros?: StoreProduct; sok?: StoreProduct };
 }
 

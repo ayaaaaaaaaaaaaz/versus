@@ -347,7 +347,8 @@
       "unit": "kg"
      }
     }
-   }
+   },
+   "fresh": true
   },
   {
    "id": "muz",
@@ -370,7 +371,8 @@
       "unit": "kg"
      }
     }
-   }
+   },
+   "fresh": true
   },
   {
    "id": "domates",
@@ -393,7 +395,8 @@
       "unit": "kg"
      }
     }
-   }
+   },
+   "fresh": true
   },
   {
    "id": "sogan",
@@ -409,7 +412,8 @@
       "unit": "kg"
      }
     }
-   }
+   },
+   "fresh": true
   },
   {
    "id": "patates",
@@ -432,7 +436,8 @@
       "unit": "kg"
      }
     }
-   }
+   },
+   "fresh": true
   },
   {
    "id": "mercimek",
