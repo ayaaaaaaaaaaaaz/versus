@@ -136,7 +136,9 @@ export function filterSales<T extends PriceObservation>(rows: T[]): (T & { sale?
   const series = new Map<string, T[]>();
   for (const row of rows) {
     const key = `${row.itemId}|${row.store}`;
-    series.set(key, [...(series.get(key) ?? []), row]);
+    const list = series.get(key);
+    if (list) list.push(row);
+    else series.set(key, [row]);
   }
 
   const replaced = new Map<T, number>();
@@ -222,7 +224,9 @@ interface BuildOptions {
   basis?: 'regular' | 'discounted';
   /**
    * 'filter' (the default) prices promotions at the regular price they
-   * interrupted; 'keep' uses whatever the page showed that day.
+   * interrupted; 'keep' uses the recorded regular price unfiltered. That is not
+   * the same as the price on the page: ŞOK reports its promotions separately,
+   * so for "what the page showed" use basis 'discounted' instead.
    */
   sales?: 'filter' | 'keep';
   carryForwardDays?: number;
@@ -234,6 +238,13 @@ interface BuildOptions {
    * hand their weight to lentils just because both are CP0117.
    */
   exclude?: string[];
+  /**
+   * Forces the base day. Variants of the headline (excluding items, keeping
+   * promotions) pass the headline's own base so every line on a chart is 100
+   * on the same day — otherwise a smaller item set can clear the coverage bar
+   * earlier and anchor somewhere else under the same label.
+   */
+  base?: string;
 }
 
 /**
@@ -254,6 +265,7 @@ export function buildDailyIndex(
     basket: fullBasket = BASKET,
     exclude = [],
     sales = 'filter',
+    base: forcedBase,
   } = options;
 
   const basket = fullBasket.filter((b) => !exclude.includes(b.id));
@@ -299,7 +311,10 @@ export function buildDailyIndex(
     return total > 0 ? have / total : 0;
   };
 
-  const base = dates.find((d) => coverageOf(d) >= baseCoverage) ?? null;
+  const base =
+    forcedBase != null
+      ? observed.has(forcedBase) ? forcedBase : null
+      : dates.find((d) => coverageOf(d) >= baseCoverage) ?? null;
   if (!base) {
     return {
       base: null,
@@ -385,7 +400,9 @@ export function toMonthly(points: { date: string; value: number }[]): MonthlyPoi
   const buckets = new Map<string, number[]>();
   for (const p of points) {
     const month = p.date.slice(0, 7);
-    buckets.set(month, [...(buckets.get(month) ?? []), p.value]);
+    const list = buckets.get(month);
+    if (list) list.push(p.value);
+    else buckets.set(month, [p.value]);
   }
   return [...buckets.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -429,6 +446,11 @@ const lastDayOfMonth = (month: string) => {
   return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 };
 
+const previousMonth = (month: string) => {
+  const [y, m] = month.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
+};
+
 /**
  * Month-on-month inflation from the daily index.
  *
@@ -437,18 +459,27 @@ const lastDayOfMonth = (month: string) => {
  * MIN_MONTH_DAYS of index: averaging two days of September against thirty-one
  * of October would compare a snapshot with a month. Otherwise the rate falls
  * back to end-to-end, and says so.
+ *
+ * A rate is only ever against the calendar month immediately before. If a
+ * collection outage empties a whole month, the month after it gets no rate
+ * rather than a two-month change labelled as one — which the UI would then
+ * annualise as if it were monthly. A month counts as complete when collection
+ * reached its last day or carried on into a later month.
  */
 export function monthlyRates(points: { date: string; value: number }[]): MonthlyRate[] {
   const byMonth = new Map<string, { date: string; value: number }[]>();
   for (const p of [...points].sort((a, b) => a.date.localeCompare(b.date))) {
     const month = p.date.slice(0, 7);
-    byMonth.set(month, [...(byMonth.get(month) ?? []), p]);
+    const list = byMonth.get(month);
+    if (list) list.push(p);
+    else byMonth.set(month, [p]);
   }
   const months = [...byMonth.keys()].sort();
   const mean = (xs: { value: number }[]) => xs.reduce((a, p) => a + p.value, 0) / xs.length;
 
   const out: MonthlyRate[] = [];
   for (let i = 1; i < months.length; i++) {
+    if (months[i - 1] !== previousMonth(months[i])) continue;
     const prev = byMonth.get(months[i - 1])!;
     const cur = byMonth.get(months[i])!;
     const average = prev.length >= MIN_MONTH_DAYS && cur.length >= MIN_MONTH_DAYS;
@@ -461,7 +492,7 @@ export function monthlyRates(points: { date: string; value: number }[]): Monthly
       from: average ? prev[0].date : prev.at(-1)!.date,
       to: cur.at(-1)!.date,
       days: cur.length,
-      complete: cur.at(-1)!.date === lastDayOfMonth(months[i]),
+      complete: cur.at(-1)!.date === lastDayOfMonth(months[i]) || i < months.length - 1,
     });
   }
   return out;
@@ -469,6 +500,23 @@ export function monthlyRates(points: { date: string; value: number }[]): Monthly
 
 /** A monthly rate compounded over twelve months. */
 export const annualise = (monthlyPct: number) => ((1 + monthlyPct / 100) ** 12 - 1) * 100;
+
+/**
+ * Whether a rate can still move. The sale filter only recognises a promotion
+ * once the price comes back, up to SALE_MAX_DAYS later, so a month whose last
+ * days might be on promotion is provisional until that window has passed.
+ */
+export const isSettled = (rate: MonthlyRate, lastDate: string) =>
+  rate.complete && dayDiff(rate.to, lastDate) >= SALE_MAX_DAYS;
+
+let headlineCache: DailyIndex | null = null;
+/**
+ * The headline index over the bundled data, built once. Several panels read
+ * it, and the build walks every day of every series, so they share one copy.
+ */
+export function headlineIndex(): DailyIndex {
+  return (headlineCache ??= buildDailyIndex());
+}
 
 export interface Contribution {
   itemId: string;
@@ -633,67 +681,8 @@ export function compareSeries(rows: PriceObservation[] = observations): Comparis
 }
 
 // ---------------------------------------------------------------------------
-// Per-item movement
+// Shelf prices
 // ---------------------------------------------------------------------------
-
-export interface ItemMove {
-  itemId: string;
-  name: string;
-  /** Unit price on the base day, averaged geometrically across stores. */
-  basePrice: number;
-  latestPrice: number;
-  changePct: number;
-  stores: string[];
-  unit: string;
-}
-
-/**
- * Per-item price change between the base day and the latest day, ranked.
- *
- * Uses the same Jevons relative and the same sale filter the index itself
- * uses, so the table cannot disagree with the headline number it sits under.
- */
-export function itemMoves(
-  rows: PriceObservation[] = observations,
-  basket: BasketItem[] = BASKET,
-): ItemMove[] {
-  const byDate = new Map<string, Map<string, Record<string, number>>>();
-  for (const row of filterSales(rows)) {
-    if (!(row.unitPrice > 0)) continue;
-    const byItem = byDate.get(row.date) ?? new Map();
-    const stores = byItem.get(row.itemId) ?? {};
-    stores[row.store] = row.unitPrice;
-    byItem.set(row.itemId, stores);
-    byDate.set(row.date, byItem);
-  }
-
-  const dates = [...byDate.keys()].sort();
-  if (!dates.length) return [];
-  const first = byDate.get(dates[0])!;
-  const last = byDate.get(dates.at(-1)!)!;
-
-  const out: ItemMove[] = [];
-  for (const item of basket) {
-    const base = first.get(item.id);
-    const now = last.get(item.id);
-    if (!base || !now) continue;
-    const jevons = jevonsRelative(now, base);
-    if (!jevons) continue;
-    const basePrice = geometricMean(jevons.stores.map((s) => base[s]));
-    const latestPrice = geometricMean(jevons.stores.map((s) => now[s]));
-    if (basePrice == null || latestPrice == null) continue;
-    out.push({
-      itemId: item.id,
-      name: item.name,
-      basePrice,
-      latestPrice,
-      changePct: (jevons.relative - 1) * 100,
-      stores: jevons.stores,
-      unit: item.unit,
-    });
-  }
-  return out.sort((a, b) => b.changePct - a.changePct);
-}
 
 export interface ShelfPrice {
   date: string;
@@ -779,7 +768,9 @@ export function detectShrinkflation(
   for (const row of rows) {
     if (!(row.baseQuantity > 0) || !(row.regularPrice > 0)) continue;
     const key = `${row.itemId}|${row.store}`;
-    byProduct.set(key, [...(byProduct.get(key) ?? []), row]);
+    const list = byProduct.get(key);
+    if (list) list.push(row);
+    else byProduct.set(key, [row]);
   }
 
   const events: ShrinkEvent[] = [];
