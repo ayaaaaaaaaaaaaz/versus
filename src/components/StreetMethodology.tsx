@@ -156,6 +156,12 @@ export function StreetMethodology() {
               grafiğe çizilmiyor.
             </li>
             <li>
+              <strong className="text-ink-200">İlk gün kampanyası görülemez.</strong> Kampanya
+              filtresi bir düşüşü, fiyat eski düzeyine döndüğünde tanır. Ölçüm bir ürün indirimdeyken
+              başladıysa, “eski düzey” bilinmez ve indirimin bitişi kalıcı bir artış gibi görünür.
+              Ölçüm öncesine ait fiyat olmadan bunu güvenle ayırmanın yolu yok.
+            </li>
+            <li>
               <strong className="text-ink-200">Grup içi ağırlıklar eşit.</strong> Alt grup toplamları
               resmîdir; grup içindeki dağılım, ürün düzeyinde yayımlanmış ağırlık olmadığı için
               izlenen kalemlere eşit bölünür. Tek keyfî adım budur.
