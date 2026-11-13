@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { BASKET } from '../config/street-basket';
 import {
   MEANINGFUL_DAYS,
-  buildDailyIndex,
   collectionDays,
   detectShrinkflation,
+  headlineIndex,
   latestShelfPrices,
   readiness,
   streetMeta,
@@ -122,15 +122,15 @@ function Spark({ values }: { values: number[] }) {
  */
 export function ItemMovesTable() {
   const shelf = useMemo(() => latestShelfPrices(), []);
-  const { trend, moves } = useMemo(() => {
-    const points = buildDailyIndex().points;
+  const { trend, moves, base } = useMemo(() => {
+    const { points, base } = headlineIndex();
     const trend: Record<string, number[]> = {};
     for (const item of BASKET) trend[item.id] = points.map((p) => p.relatives[item.id]).filter((v) => v != null);
     const last = points.at(-1);
     const moves = new Map(
       Object.entries(last?.relatives ?? {}).map(([id, r]) => [id, { changePct: (r - 1) * 100 }]),
     );
-    return { trend, moves: points.length > 1 ? moves : new Map<string, { changePct: number }>() };
+    return { trend, base, moves: points.length > 1 ? moves : new Map<string, { changePct: number }>() };
   }, []);
   const state = readiness();
 
@@ -207,7 +207,7 @@ export function ItemMovesTable() {
         </table>
       </div>
       <p className="border-t border-ink-800 px-4 py-2.5 text-[11px] leading-relaxed text-ink-500">
-        Fiyat, ürünün o mağazadaki son kaydıdır; yeşil olanlar indirimli. Değişim, {state.firstDay ?? 'ilk gün'}
+        Fiyat, ürünün o mağazadaki son kaydıdır; yeşil olanlar indirimli. Değişim, endeksin başlangıç günü {base ?? '—'}
         ’den bu yana, geçici kampanyalar ayıklanarak hesaplanır — endeksle aynı yöntem.
       </p>
     </div>
