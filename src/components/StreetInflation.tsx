@@ -12,9 +12,12 @@ import { motion } from 'framer-motion';
 import releases from '../data/official-releases.json';
 import {
   FRESH_ITEMS,
+  SALE_MAX_DAYS,
   annualise,
   buildDailyIndex,
   contributions,
+  headlineIndex,
+  isSettled,
   monthlyRates,
   readiness,
   type MonthlyRate,
@@ -32,6 +35,11 @@ const monthName = (month: string) => {
 const dayName = (date: string) => {
   const [, m, d] = date.split('-').map(Number);
   return `${d} ${SHORT[m - 1]}`;
+};
+const addDays = (date: string, n: number) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 };
 const signed = (v: number, digits = 1) => `${v >= 0 ? '+' : ''}${formatPct(v, digits)}`;
 const points2 = (v: number) =>
@@ -57,10 +65,14 @@ interface Row {
  */
 const MODEL = (() => {
   const state = readiness();
-  const headline = buildDailyIndex();
-  const core = buildDailyIndex(undefined, { exclude: FRESH_ITEMS });
-  const posted = buildDailyIndex(undefined, { sales: 'keep' });
-  if (!headline.points.length) return null;
+  const headline = headlineIndex();
+  if (!headline.points.length || !headline.base) return null;
+  // Both variants are anchored on the headline's base day so all three lines
+  // are 100 on the same date, as the chart's label says.
+  const core = buildDailyIndex(undefined, { exclude: FRESH_ITEMS, base: headline.base });
+  // The discounted basis is what the page showed: ŞOK's promotional price
+  // where it has one, and Migros's price as listed, sale or not.
+  const posted = buildDailyIndex(undefined, { basis: 'discounted', base: headline.base });
 
   const coreBy = new Map(core.points.map((p) => [p.date, p.value]));
   const postedBy = new Map(posted.points.map((p) => [p.date, p.value]));
@@ -80,7 +92,10 @@ const MODEL = (() => {
   const last = headline.points.at(-1)!;
   const parts = contributions(last).filter((c) => Math.abs(c.points) >= 0.005);
 
-  return { state, rows, rates, coreRates, focus, last, base: headline.base!, parts };
+  const settled = focus ? isSettled(focus, last.date) : false;
+  const settlesOn = focus ? addDays(focus.to, SALE_MAX_DAYS) : null;
+
+  return { state, rows, rates, coreRates, focus, settled, settlesOn, last, base: headline.base, parts };
 })();
 
 function Tip({ active, payload }: { active?: boolean; payload?: { payload: Row }[] }) {
@@ -106,7 +121,15 @@ function Tip({ active, payload }: { active?: boolean; payload?: { payload: Row }
   );
 }
 
-function RateTable({ rates, coreRates }: { rates: MonthlyRate[]; coreRates: Map<string, MonthlyRate> }) {
+function RateTable({
+  rates,
+  coreRates,
+  lastDate,
+}: {
+  rates: MonthlyRate[];
+  coreRates: Map<string, MonthlyRate>;
+  lastDate: string;
+}) {
   return (
     <div className="panel overflow-hidden rounded-2xl">
       <table className="w-full text-sm">
@@ -127,7 +150,9 @@ function RateTable({ rates, coreRates }: { rates: MonthlyRate[]; coreRates: Map<
                 <td className="px-4 py-2 text-ink-200">
                   {monthName(r.month)}
                   <span className="ml-2 font-mono text-[10px] text-ink-600">
-                    {r.complete ? (r.method === 'average' ? 'ay ortalaması' : 'uçtan uca') : `${r.days} gün · sürüyor`}
+                    {!r.complete
+                      ? `${r.days} gün · sürüyor`
+                      : `${r.method === 'average' ? 'ay ortalaması' : 'uçtan uca'}${isSettled(r, lastDate) ? '' : ' · geçici'}`}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-right font-mono text-xs tabular text-mint-400">
@@ -146,7 +171,8 @@ function RateTable({ rates, coreRates }: { rates: MonthlyRate[]; coreRates: Map<
       </table>
       <p className="border-t border-ink-800 px-4 py-2.5 text-[11px] leading-relaxed text-ink-500">
         Uçtan uca: ayın son günü, önceki ayın son gününe karşı. İki ay da en az 20 gün ölçüldüğünde
-        TÜİK gibi ay ortalamaları karşılaştırılır. TÜİK sütunu, aylık bültenden elle girilir ve girildiği ay dolar.
+        TÜİK gibi ay ortalamaları karşılaştırılır. “Geçici” rakamlar, kampanya filtresinin ayın son
+        günlerini kesinleştirmesi için gereken {SALE_MAX_DAYS} gün dolana kadar değişebilir. TÜİK sütunu, aylık bültenden elle girilir ve girildiği ay dolar.
       </p>
     </div>
   );
@@ -156,10 +182,12 @@ function Contributions({ parts, total }: { parts: ReturnType<typeof contribution
   const max = Math.max(...parts.map((p) => Math.abs(p.points)), 0.01);
   return (
     <div className="panel rounded-2xl p-5 sm:p-6">
-      <h3 className="text-sm font-semibold text-ink-100">Artışı kim getirdi</h3>
+      <h3 className="text-sm font-semibold text-ink-100">
+        {total >= 100 ? 'Artışı kim getirdi' : 'Düşüşü kim getirdi'}
+      </h3>
       <p className="mt-2 text-xs leading-relaxed text-ink-400">
-        Endeksin 100’den {points2(total)} seviyesine çıkışı, her kalemin ağırlığı çarpı kendi değişimi
-        olarak tam olarak paylaşılır. Çubuklar endeks puanıdır, toplamları başlıktaki rakamı verir.
+        Endeksin 100’den {points2(total)} seviyesine {total >= 100 ? 'çıkışı' : 'inişi'}, her kalemin
+        ağırlığı çarpı kendi değişimi olarak tam olarak paylaşılır. Çubuklar endeks puanıdır, toplamları başlıktaki rakamı verir.
       </p>
       <ul className="mt-4 space-y-1.5">
         {parts.map((p) => (
@@ -188,7 +216,7 @@ function Contributions({ parts, total }: { parts: ReturnType<typeof contribution
 /** Our own food inflation, from the prices we collected. */
 export function StreetInflation() {
   if (!MODEL || !MODEL.state.meaningful) return null;
-  const { state, rows, rates, coreRates, focus, last, base, parts } = MODEL;
+  const { state, rows, rates, coreRates, focus, settled, settlesOn, last, base, parts } = MODEL;
 
   const sinceStart = last.value - 100;
   const focusCore = focus ? coreRates.get(focus.month) : undefined;
@@ -200,7 +228,13 @@ export function StreetInflation() {
         <Stat
           label={focus ? `${monthName(focus.month)} · aylık` : 'Aylık'}
           value={focus ? signed(focus.changePct) : '—'}
-          hint={focus ? `${dayName(focus.from)} → ${dayName(focus.to)}` : 'İlk tam ay bekleniyor'}
+          hint={
+            !focus
+              ? 'İlk tam ay bekleniyor'
+              : settled
+                ? `${dayName(focus.from)} → ${dayName(focus.to)}`
+                : `Geçici · kesinleşme ${dayName(settlesOn!)}`
+          }
           tone="mint"
         />
         <Stat
@@ -229,7 +263,9 @@ export function StreetInflation() {
         <div className="rounded-2xl border border-ink-700/60 bg-ink-950/40 px-5 py-4">
           <p className="text-sm leading-relaxed text-ink-200">
             {monthName(focus.month)} ayında market rafındaki 25 kalemlik sepetimiz{' '}
-            <strong className="text-mint-400">{signed(focus.changePct)}</strong> pahalandı. Bu hız
+            <strong className="text-mint-400">{signed(focus.changePct)}</strong>{' '}
+            {focus.changePct >= 0 ? 'pahalandı' : 'ucuzladı'}
+            {!settled && ' (geçici rakam: ayın son günlerindeki bir kampanya henüz ayıklanmamış olabilir)'}. Bu hız
             bir yıl sürseydi yıllık{' '}
             <span className="font-mono tabular text-ink-300">{signed(annualise(focus.changePct), 0)}</span>{' '}
             ederdi — ama tek bir ayı yıla çevirmek yanıltır, çünkü sebze-meyve fiyatları mevsimle
@@ -288,14 +324,14 @@ export function StreetInflation() {
           </ResponsiveContainer>
         </div>
         <p className="mt-3 px-1 text-[11px] leading-relaxed text-ink-500">
-          Kesikli çizgi, sayfada o gün görünen fiyattır. Migros indirimli fiyatı ayrıca göstermediği
+          Kesikli çizgi, sayfada o gün görünen fiyattır — ŞOK’un indirimli fiyatı dahil. Migros indirimli fiyatı ayrıca göstermediği
           için iki günlük bir tavuk kampanyası sepeti dört puan aşağı çeker, sonra geri iter. Ana
           çizgi bu geçici indirimleri ayıklar; yöntem aşağıda.
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <RateTable rates={rates} coreRates={coreRates} />
+        <RateTable rates={rates} coreRates={coreRates} lastDate={last.date} />
         <Contributions parts={parts} total={last.value} />
       </div>
     </div>

@@ -7,7 +7,6 @@ import {
   MEANINGFUL_DAYS,
   detectShrinkflation,
   geometricMean,
-  itemMoves,
   jevonsRelative,
   readiness,
   toCsv,
@@ -18,6 +17,8 @@ import {
   annualise,
   contributions,
   filterSales,
+  headlineIndex,
+  isSettled,
   FRESH_ITEMS,
   latestShelfPrices,
   monthlyRates,
@@ -456,38 +457,6 @@ describe('shrinkflation detection', () => {
   });
 });
 
-describe('itemMoves', () => {
-  const basket = BASKET.filter((b) => ['ekmek', 'pilic-baget'].includes(b.id));
-  const o = (date: string, itemId: string, store: string, p: number): PriceObservation => ({
-    date, store, itemId, unitPrice: p, regularPrice: p, discountedPrice: null,
-    baseQuantity: 1, source: 'scraped',
-  });
-
-  it('ranks the biggest risers first', () => {
-    const moves = itemMoves([
-      o('2026-01-01', 'ekmek', 'migros', 10), o('2026-01-01', 'pilic-baget', 'migros', 10),
-      o('2026-01-02', 'ekmek', 'migros', 20), o('2026-01-02', 'pilic-baget', 'migros', 11),
-    ], basket);
-    expect(moves[0].itemId).toBe('ekmek');
-    expect(moves[0].changePct).toBeCloseTo(100, 6);
-    expect(moves[1].changePct).toBeCloseTo(10, 6);
-  });
-
-  it('agrees with the index on what a relative is', () => {
-    // Same Jevons rule: a store missing at base cannot contribute.
-    const moves = itemMoves([
-      o('2026-01-01', 'ekmek', 'migros', 10),
-      o('2026-01-02', 'ekmek', 'migros', 20), o('2026-01-02', 'ekmek', 'sok', 999),
-    ], basket);
-    expect(moves[0].stores).toEqual(['migros']);
-    expect(moves[0].changePct).toBeCloseTo(100, 6);
-  });
-
-  it('is empty without observations', () => {
-    expect(itemMoves([], basket)).toHaveLength(0);
-  });
-});
-
 describe('readiness', () => {
   const o = (date: string): PriceObservation => ({
     date, store: 'migros', itemId: 'ekmek', unitPrice: 1, regularPrice: 1,
@@ -590,6 +559,28 @@ describe('sale filter', () => {
   });
 });
 
+describe('forced base day', () => {
+  it('anchors a variant on the headline base even if it could start earlier', () => {
+    const basket = TEST_BASKET;
+    const rows = [
+      obs('2026-01-01', 'ekmek', 'migros', 10),
+      obs('2026-01-02', 'ekmek', 'migros', 11),
+      obs('2026-01-02', 'pilic-baget', 'migros', 20),
+      obs('2026-01-03', 'ekmek', 'migros', 22),
+      obs('2026-01-03', 'pilic-baget', 'migros', 20),
+    ];
+    const own = buildDailyIndex(rows, { basket, exclude: ['pilic-baget'], baseCoverage: 0.5 });
+    const forced = buildDailyIndex(rows, { basket, exclude: ['pilic-baget'], base: '2026-01-02' });
+    expect(own.base).toBe('2026-01-01');
+    expect(forced.base).toBe('2026-01-02');
+    expect(forced.points.at(-1)!.value).toBeCloseTo(200, 8);
+  });
+
+  it('builds the shared headline once', () => {
+    expect(headlineIndex()).toBe(headlineIndex());
+  });
+});
+
 describe('excluding items', () => {
   it('keeps the full-basket weights instead of handing them to siblings', () => {
     // Tomatoes and lentils share CP0117. Without tomatoes, lentils must keep
@@ -644,6 +635,28 @@ describe('monthlyRates', () => {
     expect(r[0].method).toBe('end-to-end');
     expect(r[0].from).toBe('2026-01-31');
     expect(r[0].changePct).toBeCloseTo(2, 8);
+  });
+
+  it('gives no rate across a month with no index at all', () => {
+    // An outage empties November; December must not report a two-month move.
+    const r = monthlyRates([...days('2026-10', 31, () => 100), ...days('2026-12', 31, () => 106)]);
+    expect(r).toEqual([]);
+  });
+
+  it('counts a month as complete once a later month has data', () => {
+    const r = monthlyRates([
+      ...days('2026-01', 31, () => 100),
+      ...days('2026-02', 20, () => 101),
+      ...days('2026-03', 5, () => 102),
+    ]);
+    expect(r.find((x) => x.month === '2026-02')!.complete).toBe(true);
+    expect(r.find((x) => x.month === '2026-03')!.complete).toBe(false);
+  });
+
+  it('keeps a month provisional until the sale window has passed', () => {
+    const [oct] = monthlyRates([...days('2026-09', 30, () => 100), ...days('2026-10', 31, () => 101)]);
+    expect(isSettled(oct, '2026-11-03')).toBe(false);
+    expect(isSettled(oct, '2026-11-14')).toBe(true);
   });
 
   it('marks a month still in progress', () => {
